@@ -22,6 +22,26 @@ npx next build && npx next start     # http://localhost:3000
    importar `node-red/flows.json`. Y abrir **ModbusTools / Modbus Slave** (`mbslave.exe`):
    TCP, puerto 502, Slave ID 1, Holding Register, address 0, quantity 30.
 
+## La planta simulada (ensayo de campo)
+
+En vez de mover registros a mano en el mbslave, hay una **planta que produce sola** — cicla
+reposo → dosificando → fin de ciclo, con los pesos subiendo de a poco, como la real:
+
+```bash
+npm run planta            # servidor Modbus TCP, puerto 502, Slave ID 1
+                          # SESGO=0 → balanza perfecta · CICLO=10 → cargas más rápidas
+npm run verificar:leer    # imprime los registros crudos, NO guarda (¿llego al equipo?)
+npm run verificar         # Node-RED de bolsillo: detecta el fin de ciclo y postea
+```
+
+`verificar` hace **exactamente lo mismo que el flujo de Node-RED**, en 60 líneas. Es la
+herramienta de diagnóstico: si esto lee y Node-RED no, el problema es el flujo; si esto
+tampoco lee, el problema es la red / la IP / el puerto. **En la planta es lo primero que
+se corre** (`HMI_HOST=<ip-del-hmi> npm run verificar:leer`).
+
+El plan completo del día de instalación está en el cerebro:
+`clientes/hormigonera-jose/plan-puesta-en-marcha.md`.
+
 > ⚠️ El dev server (`npm run dev`) **no ve los cambios de archivos en `/mnt/d`**: WSL no
 > emite eventos de inotify en discos montados, así que Turbopack sirve una versión vieja
 > (incluso ignora rutas nuevas). Para desarrollar, reiniciarlo tras cada edición. Para la
