@@ -56,6 +56,18 @@ export default function RootLayout({
               >
                 Historial de cargas
               </Link>
+              <Link
+                href="/rentabilidad"
+                className="rounded-md px-3 py-1.5 font-medium text-stone-700 hover:bg-stone-100"
+              >
+                Rentabilidad
+              </Link>
+              <Link
+                href="/clientes"
+                className="rounded-md px-3 py-1.5 font-medium text-stone-700 hover:bg-stone-100"
+              >
+                Clientes
+              </Link>
             </nav>
 
             <div className="ml-auto flex items-center gap-2 text-sm text-stone-500">
