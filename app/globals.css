@@ -66,9 +66,10 @@
 }
 
 :root {
-    --sans: "Inter", "Segoe UI", system-ui, sans-serif;
-    --display: "Space Grotesk", "Segoe UI", sans-serif;
-    --mono: "JetBrains Mono", Consolas, ui-monospace, monospace;
+    /* Las familias las inyecta next/font desde app/layout.tsx. */
+    --sans: var(--font-inter), "Segoe UI", system-ui, sans-serif;
+    --display: var(--font-space-grotesk), "Segoe UI", sans-serif;
+    --mono: var(--font-jetbrains-mono), Consolas, ui-monospace, monospace;
 
     --ink: #17140F;
     --ink-soft: #4A4238;

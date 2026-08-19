@@ -11,7 +11,9 @@ export default function Home() {
       <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
         Orka Studio
       </p>
-      <h1 className="text-3xl font-semibold tracking-tight">{siteConfig.name}</h1>
+      <h1 className="font-heading text-3xl font-semibold tracking-tight">
+        {siteConfig.name}
+      </h1>
       <p className="text-muted-foreground">{siteConfig.description}</p>
       <div className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">
         Andamiaje listo. La construccion arranca por{" "}
