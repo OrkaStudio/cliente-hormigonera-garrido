@@ -1,0 +1,35 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Fundamentos/Empezar acá" />
+
+# Sistema de diseño — Hormimonte SRL
+
+Este catálogo es la fuente. Cuando construyas cualquiera de los nueve apartados,
+los componentes salen de acá; no se inventan en la pantalla.
+
+## Las tres reglas
+
+**1. El fondo es hormigón, el texto es carbón.** Nada compite por atención salvo
+lo que la merece.
+
+**2. El color significa estado, no decoración.** Verde, ámbar y rojo quieren decir
+algo concreto. Si un elemento no comunica un estado, va en neutro.
+
+**3. Todo número lleva `.num`.** Numerales tabulares, alineados a la derecha.
+Esta aplicación es columnas de kilos y de pesos: sin ancho fijo por dígito, no
+se leen de un vistazo — que es lo único que José hace con ella.
+
+## Cómo está organizado
+
+- **Fundamentos** — marca, paleta, tipografía y el semáforo. Se leen antes de construir.
+- **Base** — botones, campos, tabla, diálogo. Vienen de shadcn/ui sobre Base UI, vestidos con nuestros tokens. Ojo con la API: Base UI usa `render={<Button />}`, no el `asChild` de Radix.
+- **Dominio** — las piezas que solo existen en una hormigonera: los tres números, el desvío, el semáforo de stock.
+
+## Lo que este sistema asume del negocio
+
+Estas decisiones ya están tomadas y el diseño las da por ciertas:
+
+- Una carga es una venta · todo en pesos · **nada fiscal**.
+- El PLC es el centro y la aplicación replica; **nunca** se le manda un comando.
+- El stock **se deduce**, no se mide: los silos no tienen balanza.
+- Una carga anulada **igual descuenta stock**.

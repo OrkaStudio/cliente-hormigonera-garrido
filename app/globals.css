@@ -1,25 +1,238 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* ============================================================
+   SISTEMA DE DISEÑO — Hormigonera Garrido
+   ------------------------------------------------------------
+   Esto es un tablero de planta, no un producto de consumo.
+   Tres reglas gobiernan todo lo de abajo:
+
+   1. El fondo es hormigón, el texto es carbón. Nada compite.
+   2. El color se reserva para el ESTADO. Verde/ámbar/rojo
+      significan algo; no se usan para decorar.
+   3. Un solo acento frío (acero) para lo interactivo, para que
+      los botones no se confundan con los semáforos.
+   ============================================================ */
 
 :root {
-  --background: #f4f3f1; /* hormigón */
-  --foreground: #1c1917;
+  /* --- Marca: Hormimonte SRL ------------------------------- */
+  /* Muestreados del logo. El negro de la marca (#1c1a19) es
+     prácticamente el carbón que ya usábamos, así que la identidad
+     entra sin pelearse con el texto.
+
+     El rojo da 4,44:1 sobre el fondo hormigón: NO alcanza para texto
+     (hace falta 4,5:1), sí para rellenos con blanco encima (4,93:1).
+     Por eso el rojo de marca se usa lleno, y para texto va la versión
+     oscura --alarma-700. */
+  --marca-rojo: #da251b;
+  --marca-negro: #1c1a19;
+
+  /* --- Neutrales: hormigón y carbón ------------------------ */
+  --hormigon-50:  #fafaf9;
+  --hormigon-100: #f4f3f1; /* fondo de la aplicación */
+  --hormigon-200: #e7e5e1;
+  --hormigon-300: #d6d3ce; /* bordes */
+  --hormigon-400: #a8a29b;
+  --hormigon-500: #78716a; /* texto secundario */
+  --hormigon-600: #57534d;
+  --hormigon-700: #44403a;
+  --hormigon-800: #292524;
+  --hormigon-900: #1c1917; /* texto principal */
+
+  /* --- Acero: color de DATO, no de interfaz ---------------- */
+  /* Codifica una sola cosa en todo el sistema: "esto lo pidió el PLC".
+     No se usa para botones ni enlaces — la interfaz es negra y roja,
+     como la marca. Un color de dato y un color de acción que son el
+     mismo color hacen que el usuario no sepa qué es clickeable. */
+  --acero-50:  #f0f5f9;
+  --acero-100: #dce8f1;
+  --acero-200: #b9d1e3;
+  --acero-300: #8db3cf;
+  --acero-400: #5a8fb4;
+  --acero-500: #356f97;
+  --acero-600: #295879;
+  --acero-700: #1f4460;
+
+  /* --- Semáforo: dentro de tolerancia ---------------------- */
+  --ok-50:  #ecf6ef;
+  --ok-100: #d3ebda;
+  --ok-200: #a9d7b7;
+  --ok-500: #2e7d46;
+  --ok-600: #256439;
+  --ok-700: #1c4c2c;
+
+  /* --- Semáforo: atención (desvío leve, stock bajo) -------- */
+  --atencion-50:  #fdf6e7;
+  --atencion-100: #faeac4;
+  --atencion-200: #f2d489;
+  --atencion-500: #b57a0b;
+  --atencion-600: #92620a;
+  --atencion-700: #6e4907;
+
+  /* --- Semáforo: alarma (desvío grave, quiebre) ------------ */
+  --alarma-50:  #fdeeec;
+  --alarma-100: #fad5d1;
+  --alarma-200: #f2aca4;
+  --alarma-500: var(--marca-rojo); /* relleno · 4,93:1 con blanco  */
+  --alarma-600: #b3271a;           /* relleno oscuro y bordes      */
+  --alarma-700: #a51f14;           /* texto · 6,75:1 sobre fondo   */
+
+  /* --- Los tres números ------------------------------------ */
+  /* receta declarada · objetivo del PLC · peso real.
+     Cada uno tiene su color fijo en TODA la aplicación: si el
+     usuario aprende el código una vez, lo lee en cualquier
+     pantalla. Ver decisiones/hormigonera-* y el apartado 2. */
+  --num-receta:   var(--hormigon-500); /* lo que dice la receta  */
+  --num-objetivo: var(--acero-500);    /* lo que pidió el PLC    */
+  --num-real:     var(--hormigon-900); /* lo que pesó la balanza */
+
+  /* --- Wash: el tinte del 10% ------------------------------ */
+  /* Para fondos de fila seleccionada, pestaña activa y relleno de
+     baja intensidad. Existen como token para que nadie invente un
+     `bg-ok-500/10` distinto en cada pantalla. */
+  --ok-wash:       color-mix(in oklch, var(--ok-500) 10%, transparent);
+  --atencion-wash: color-mix(in oklch, var(--atencion-500) 10%, transparent);
+  --alarma-wash:   color-mix(in oklch, var(--alarma-500) 10%, transparent);
+  --acero-wash:    color-mix(in oklch, var(--acero-500) 10%, transparent);
+  --marca-wash:    color-mix(in oklch, var(--marca-rojo) 10%, transparent);
+
+  /* --- Sombra: mínima y con intención ---------------------- */
+  /* Tres niveles y ninguno más. La sombra acá no decora: dice a qué
+     altura está la superficie. Una tarjeta apenas se despega del
+     hormigón; un diálogo flota de verdad. */
+  --sombra-tarjeta:  0 1px 2px rgb(28 25 23 / 0.04), 0 1px 1px rgb(28 25 23 / 0.03);
+  --sombra-elevada:  0 4px 12px rgb(28 25 23 / 0.06), 0 1px 2px rgb(28 25 23 / 0.04);
+  --sombra-flotante: 0 12px 32px rgb(28 25 23 / 0.12), 0 2px 6px rgb(28 25 23 / 0.06);
+
+  /* --- Mapeo a los tokens de shadcn ------------------------ */
+  --background: var(--hormigon-100);
+  --foreground: var(--hormigon-900);
+  --card: #ffffff;                 /* papel sobre hormigón */
+  --card-foreground: var(--hormigon-900);
+  --popover: #ffffff;
+  --popover-foreground: var(--hormigon-900);
+  --primary: var(--hormigon-900);
+  --primary-foreground: #ffffff;
+  --secondary: var(--hormigon-200);
+  --secondary-foreground: var(--hormigon-800);
+  --muted: var(--hormigon-200);
+  --muted-foreground: var(--hormigon-500);
+  --accent: var(--hormigon-200);
+  --accent-foreground: var(--hormigon-900);
+  --destructive: var(--alarma-600);
+  --border: var(--hormigon-300);
+  --input: var(--hormigon-300);
+  --ring: var(--hormigon-500);
+
+  /* Esquinas contenidas: es un instrumento, no una tarjeta de marketing. */
+  --radius: 0.5rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
+  --font-mono: var(--font-geist-mono, ui-monospace, monospace);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* La paleta cruda, disponible como utilidades de Tailwind */
+  --color-marca-rojo: var(--marca-rojo);
+  --color-marca-negro: var(--marca-negro);
+  --color-hormigon-50:  var(--hormigon-50);
+  --color-hormigon-100: var(--hormigon-100);
+  --color-hormigon-200: var(--hormigon-200);
+  --color-hormigon-300: var(--hormigon-300);
+  --color-hormigon-400: var(--hormigon-400);
+  --color-hormigon-500: var(--hormigon-500);
+  --color-hormigon-600: var(--hormigon-600);
+  --color-hormigon-700: var(--hormigon-700);
+  --color-hormigon-800: var(--hormigon-800);
+  --color-hormigon-900: var(--hormigon-900);
+
+  --color-acero-50:  var(--acero-50);
+  --color-acero-100: var(--acero-100);
+  --color-acero-200: var(--acero-200);
+  --color-acero-300: var(--acero-300);
+  --color-acero-400: var(--acero-400);
+  --color-acero-500: var(--acero-500);
+  --color-acero-600: var(--acero-600);
+  --color-acero-700: var(--acero-700);
+
+  --color-ok-50:  var(--ok-50);
+  --color-ok-100: var(--ok-100);
+  --color-ok-200: var(--ok-200);
+  --color-ok-500: var(--ok-500);
+  --color-ok-600: var(--ok-600);
+  --color-ok-700: var(--ok-700);
+
+  --color-atencion-50:  var(--atencion-50);
+  --color-atencion-100: var(--atencion-100);
+  --color-atencion-200: var(--atencion-200);
+  --color-atencion-500: var(--atencion-500);
+  --color-atencion-600: var(--atencion-600);
+  --color-atencion-700: var(--atencion-700);
+
+  --color-alarma-50:  var(--alarma-50);
+  --color-alarma-100: var(--alarma-100);
+  --color-alarma-200: var(--alarma-200);
+  --color-alarma-500: var(--alarma-500);
+  --color-alarma-600: var(--alarma-600);
+  --color-alarma-700: var(--alarma-700);
+
+  --color-ok-wash: var(--ok-wash);
+  --color-atencion-wash: var(--atencion-wash);
+  --color-alarma-wash: var(--alarma-wash);
+  --color-acero-wash: var(--acero-wash);
+  --color-marca-wash: var(--marca-wash);
+
+  --shadow-tarjeta: var(--sombra-tarjeta);
+  --shadow-elevada: var(--sombra-elevada);
+  --shadow-flotante: var(--sombra-flotante);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+  }
+  html {
+    @apply font-sans;
+  }
 }
 
-/* Es un tablero de planta, no una landing: los números se leen en columna. */
+/* Toda cifra de la aplicación lleva esto. Sin numerales tabulares
+   las columnas de kg y de pesos bailan y dejan de leerse. */
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Alias heredado del demo. Se elimina cuando caigan sus pantallas. */
 .tabular {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
