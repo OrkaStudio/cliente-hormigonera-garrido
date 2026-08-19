@@ -1,0 +1,115 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Fundamentos/Tokens" />
+
+export const Ficha = ({ hex, muestra, nombre, variable, uso, oscuro }) => (
+  <div className="border-line bg-panel shadow-tarjeta overflow-hidden rounded-lg border">
+    <div className={`border-line flex h-20 items-end border-b p-2 ${muestra}`}>
+      <code className={`num text-[11px] font-semibold ${oscuro ? 'text-white' : 'text-ink-soft'}`}>
+        {hex}
+      </code>
+    </div>
+    <div className="p-3">
+      <p className="m-0 text-sm font-semibold">{nombre}</p>
+      <code className="text-faint m-0 text-[11px]">{variable}</code>
+      <p className="text-ink-soft m-0 mt-1.5 text-xs leading-snug">{uso}</p>
+    </div>
+  </div>
+);
+
+export const Grupo = ({ titulo, regla, children }) => (
+  <section className="my-8">
+    <p className="text-faint m-0 text-[11px] font-semibold tracking-[0.12em] uppercase">{titulo}</p>
+    <p className="text-ink-soft m-0 mt-1 mb-4 max-w-2xl text-sm">{regla}</p>
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{children}</div>
+  </section>
+);
+
+# Tokens
+
+**Buscá el color por su nombre; no escribas un hex ni una fuente adentro de un
+componente.** Si hace falta un valor que no está acá, se agrega al `@theme` de
+`app/globals.css` y aparece en esta página — no se resuelve con una clase suelta
+en una pantalla.
+
+El archivo tiene dos capas: `@theme inline` define los **nombres** semánticos que
+consumen los componentes, y `:root` los **valores** de este cliente. Cambiar de
+cliente es cambiar la segunda capa; los componentes no se enteran.
+
+<Grupo
+  titulo="Marca"
+  regla="Muestreados del logo de Hormimonte. Hay un solo rojo: es el de la empresa y adentro de los datos significa alarma. No conviven dos rojos parecidos con significados distintos."
+>
+  <Ficha hex="#DA251B" muestra="bg-marca" oscuro nombre="Rojo Hormimonte" variable="--marca · bg-marca" uso="Logotipo de la barra superior, anillo de foco, navegación activa, encabezado de remitos. Nunca como fondo de fila seleccionada: ahí leería como error." />
+  <Ficha hex="#17140F" muestra="bg-ink" oscuro nombre="Tinta" variable="--ink · text-ink" uso="El negro del logo es el mismo del texto. También el relleno de los botones primarios: el botón no compite con el semáforo." />
+</Grupo>
+
+<Grupo
+  titulo="Superficie"
+  regla="El 90% de la pantalla. Fondo cálido abajo, papel arriba: las tarjetas se leen como hojas apoyadas encima."
+>
+  <Ficha hex="#FAF8F4" muestra="bg-background" nombre="Fondo" variable="--background" uso="El piso de la aplicación. Nunca blanco puro." />
+  <Ficha hex="#FFFFFF" muestra="bg-panel" nombre="Papel" variable="--panel · bg-panel" uso="Tarjetas, tablas, diálogos. Todo lo que se apoya encima del fondo." />
+  <Ficha hex="#E5DFD5" muestra="bg-line" nombre="Línea" variable="--line · border-line" uso="El contorno de cualquier superficie. Un solo peso de borde en todo el sistema." />
+  <Ficha hex="#978E80" muestra="bg-faint" oscuro nombre="Texto tenue" variable="--faint · text-faint" uso="Rótulos, pies de tarjeta, unidades, horas. Todo lo que acompaña sin ser el dato." />
+</Grupo>
+
+<Grupo
+  titulo="Severidad"
+  regla="Tres estados y nada más. El color acá significa algo: si un elemento no comunica un estado, va en neutro. Cada severidad tiene relleno, tinte suave y texto."
+>
+  <Ficha hex="#2E7D5B" muestra="bg-ok" oscuro nombre="Dentro de tolerancia" variable="--ok · bg-ok" uso="Desvío ≤ 1%, stock normal, venta cerrada. Relleno de barras y puntos." />
+  <Ficha hex="#B57A0B" muestra="bg-warn" oscuro nombre="Atención" variable="--warn · bg-warn" uso="Desvío 1–3%, stock bajo, carga sin cliente. Mirar cuando puedas." />
+  <Ficha hex="#DA251B" muestra="bg-danger" oscuro nombre="Alarma" variable="--danger · bg-danger" uso="Desvío > 3%, quiebre de stock, carga anulada. Está costando plata ahora." />
+  <Ficha hex="10% opacidad" muestra="bg-danger-wash" nombre="Tinte (wash)" variable="--danger-wash" uso="Fondo de alerta y de fila destacada. Existe como token para que nadie invente su propio /10 en cada pantalla." />
+</Grupo>
+
+<Grupo
+  titulo="Texto de severidad"
+  regla="Los rellenos NO se usan para texto: ninguno llega al contraste que pide la norma sobre el fondo. Para texto, siempre la variante -text."
+>
+  <Ficha hex="#1C4C38" muestra="bg-ok-text" oscuro nombre="Texto verde" variable="--ok-text · text-ok-text" uso="Cifras dentro de tolerancia y títulos de alerta en verde." />
+  <Ficha hex="#6E4907" muestra="bg-warn-text" oscuro nombre="Texto ámbar" variable="--warn-text" uso="Cifras y títulos de atención." />
+  <Ficha hex="#A51F14" muestra="bg-danger-text" oscuro nombre="Texto rojo" variable="--danger-text" uso="Cifras y títulos de alarma. Da 6,75:1 sobre el fondo; el rojo pleno da 4,44:1 y no alcanza." />
+  <Ficha hex="#B3271A" muestra="bg-destructive" oscuro nombre="Destructivo" variable="--destructive" uso="Relleno del botón que confirma algo irreversible. Más oscuro que el rojo pleno para que el blanco encima llegue a 6,5:1." />
+</Grupo>
+
+<Grupo
+  titulo="Dato del PLC"
+  regla="Codifica una sola cosa en todo el sistema: 'esto lo pidió el autómata'. Nunca aparece en un botón ni en un enlace — un color de dato y uno de acción que son el mismo hacen que nadie sepa qué se puede tocar."
+>
+  <Ficha hex="#356F97" muestra="bg-plc" oscuro nombre="Objetivo del PLC" variable="--plc · text-plc" uso="La cifra que pidió el autómata en Los tres números." />
+  <Ficha hex="#F0F5F9" muestra="bg-plc-soft" nombre="Fondo de dato" variable="--plc-soft" uso="Fondo de etiquetas y bloques que vienen del PLC." />
+</Grupo>
+
+## Sombra
+
+Tres niveles y ninguno más. La sombra no decora: dice a qué altura está la
+superficie.
+
+<div className="my-6 grid gap-4 sm:grid-cols-3">
+  <div className="bg-panel shadow-tarjeta rounded-lg p-4 text-sm">
+    <p className="m-0 font-medium">shadow-tarjeta</p>
+    <p className="text-faint m-0 text-xs">Apenas se despega del fondo. Tarjetas y tablas.</p>
+  </div>
+  <div className="bg-panel shadow-elevada rounded-lg p-4 text-sm">
+    <p className="m-0 font-medium">shadow-elevada</p>
+    <p className="text-faint m-0 text-xs">Menús y popovers.</p>
+  </div>
+  <div className="bg-panel shadow-flotante rounded-lg p-4 text-sm">
+    <p className="m-0 font-medium">shadow-flotante</p>
+    <p className="text-faint m-0 text-xs">Diálogos. Lo único que flota de verdad.</p>
+  </div>
+</div>
+
+## Radio
+
+`--radius` vale `0.75rem` y todo lo demás se deriva. Las píldoras totalmente
+redondeadas quedan fuera del sistema: esto es un instrumento de medición.
+
+<div className="my-6 flex flex-wrap items-end gap-4">
+  <div className="border-line bg-panel rounded-sm border px-4 py-3 text-xs">rounded-sm</div>
+  <div className="border-line bg-panel rounded-md border px-4 py-3 text-xs">rounded-md</div>
+  <div className="border-line bg-panel rounded-lg border px-4 py-3 text-xs">rounded-lg · el de las tarjetas</div>
+  <div className="border-line bg-panel rounded-xl border px-4 py-3 text-xs">rounded-xl</div>
+</div>
