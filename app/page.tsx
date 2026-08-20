@@ -151,7 +151,7 @@ export default async function Inicio({
         </section>
 
         <div className="mt-9 grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <section>
+          <section className="min-w-0">
             <h2 className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
               Cargas {d.etiquetaRango}
             </h2>
