@@ -6,15 +6,32 @@ import { UMBRALES } from './umbrales';
 /** Costo de referencia del cemento, $/kg. Sale de la última compra (apartado 6). */
 const COSTO_CEMENTO = 186;
 
+/** Una fila del desplegable: lo concreto con lo que se resuelve la alerta. */
+export interface FilaDetalle {
+  clave: string;
+  etiqueta: string;
+  valor: string;
+  tono?: Tono;
+}
+
 export interface Alerta {
   id: string;
   tono: Tono;
   titulo: string;
   detalle: string;
-  /** Texto del botón. La R2 pide que toda alerta lleve a resolverse. */
+  /**
+   * Texto del botón. La R2 pide que toda alerta lleve a resolverse — y
+   * mientras los apartados 2, 5 y 7 no existan, se resuelve acá mismo:
+   * el botón despliega `filas`, que es lo que hace falta para actuar.
+   */
   accion: string;
-  /** Apartado que la resuelve. Todavía no existe: ver TASK-006. */
+  /** Apartado que la va a resolver del todo, cuando exista. */
   destino: string;
+  /** Encabezado del desplegable. */
+  tituloDetalle?: string;
+  filas?: FilaDetalle[];
+  /** Nota al pie del desplegable: el porqué, o lo que falta. */
+  pieDetalle?: string;
 }
 
 const porcentaje = (objetivo: number, real: number) =>
@@ -118,8 +135,21 @@ export function derivarAlertas(
           ? 'Hay una carga sin cliente'
           : `Hay ${sinAsignar.length} cargas sin cliente`,
       detalle: `${m3} m³ producidos que todavía no son una venta. Sin cliente no hay precio, ni documento, ni margen.`,
-      accion: 'Asignar',
+      accion: 'Ver cuáles',
       destino: 'cargas',
+      tituloDetalle: 'Cargas esperando cliente',
+      filas: sinAsignar.map((c) => ({
+        clave: c.id,
+        etiqueta: new Date(c.momento).toLocaleTimeString('es-AR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }),
+        valor: `${c.m3} m³ de ${c.receta}`,
+        tono: 'warn' as const,
+      })),
+      pieDetalle:
+        'Asignar el cliente es lo que las convierte en venta. La pantalla para hacerlo es el apartado 2, todavía sin construir.',
     });
   }
 
@@ -128,6 +158,10 @@ export function derivarAlertas(
     if (!t || !t.crece || !t.superaUmbral) continue;
 
     const kilos = kilosDeMasPorMes(cargas, material, t.reciente);
+    const ultimas = [...cargas]
+      .sort((a, b) => a.momento.localeCompare(b.momento))
+      .slice(-8);
+
     alertas.push({
       id: `calibrar-${material.toLowerCase()}`,
       tono: 'danger',
@@ -135,6 +169,25 @@ export function derivarAlertas(
       detalle: `Viene subiendo: era ${t.previa.toFixed(1)}% en las cargas anteriores. Al ritmo de hoy son ${Math.round(kilos).toLocaleString('es-AR')} kg por mes — unos ${Math.round((kilos * COSTO_CEMENTO) / 1000).toLocaleString('es-AR')} mil pesos que se van sin facturar.`,
       accion: 'Ver desvíos',
       destino: 'recetas',
+      tituloDetalle: `Últimas ${ultimas.length} cargas · ${material.toLowerCase()} pedido contra pesado`,
+      filas: ultimas.map((c) => {
+        const p = c.pesadas.find((x) => x.material === material)!;
+        const pct = porcentaje(p.objetivo, p.real);
+        return {
+          clave: c.id,
+          etiqueta: new Date(c.momento).toLocaleString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }),
+          valor: `${p.objetivo.toLocaleString('es-AR')} → ${p.real.toLocaleString('es-AR')} kg   ${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%`,
+          tono: pct > 3 ? ('danger' as const) : pct > 1 ? ('warn' as const) : ('ok' as const),
+        };
+      }),
+      pieDetalle:
+        'Todas se van para el mismo lado: eso es balanza descalibrada, no ruido. Si se fueran para cualquier lado, no habría nada que calibrar.',
     });
   }
 
@@ -149,8 +202,29 @@ export function derivarAlertas(
           ? `${m.nombre}: te quedaste sin stock`
           : `${m.nombre} para ${dias} ${dias === 1 ? 'día' : 'días'}`,
       detalle: `Quedan ${m.restante.toLocaleString('es-AR')} ${m.unidad} estimados al ritmo de los últimos días. El número es deducido: los silos no tienen balanza.`,
-      accion: 'Ver proveedor',
+      accion: 'A quién llamar',
       destino: 'stock',
+      tituloDetalle: 'Reposición',
+      filas: [
+        ...(m.proveedor
+          ? [
+              { clave: 'prov', etiqueta: 'Proveedor', valor: m.proveedor.nombre },
+              { clave: 'tel', etiqueta: 'Teléfono', valor: m.proveedor.telefono },
+            ]
+          : []),
+        {
+          clave: 'consumo',
+          etiqueta: 'Consumo diario',
+          valor: `${m.consumoDiario.toLocaleString('es-AR')} ${m.unidad}`,
+        },
+        {
+          clave: 'llenar',
+          etiqueta: 'Para llenar el silo',
+          valor: `${(m.capacidad - m.restante).toLocaleString('es-AR')} ${m.unidad}`,
+        },
+      ],
+      pieDetalle:
+        'La existencia es deducida, no medida. Conviene pedir con margen: si el silo está más vacío de lo que dice la cuenta, el quiebre llega antes.',
     });
   }
 

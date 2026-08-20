@@ -31,7 +31,7 @@ export async function traerInicio(ahora = new Date()) {
       facturado: deHoy.reduce((a, c) => a + c.total, 0),
       sinAsignar: deHoy.filter((c) => !c.cliente).length,
     },
-    ultimas: [...deHoy].reverse().slice(0, 5) as Carga[],
+    ultimas: [...deHoy].reverse().slice(0, 8) as Carga[],
   };
 }
 

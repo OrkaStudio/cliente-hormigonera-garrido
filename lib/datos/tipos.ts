@@ -44,4 +44,6 @@ export interface Material {
   unidad: string;
   /** Consumo promedio por día con producción. */
   consumoDiario: number;
+  /** Para que la alerta de reposición diga a quién llamar (apartado 6). */
+  proveedor?: { nombre: string; telefono: string };
 }

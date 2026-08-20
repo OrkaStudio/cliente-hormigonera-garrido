@@ -105,7 +105,28 @@ export function generarCargas(ahora: Date): Carga[] {
 }
 
 export const MATERIALES: Material[] = [
-  { nombre: 'Cemento', restante: 12400, capacidad: 50000, unidad: 'kg', consumoDiario: 4100 },
-  { nombre: 'Arena', restante: 41000, capacidad: 80000, unidad: 'kg', consumoDiario: 3600 },
-  { nombre: 'Piedra', restante: 58000, capacidad: 80000, unidad: 'kg', consumoDiario: 3000 },
+  {
+    nombre: 'Cemento',
+    restante: 12400,
+    capacidad: 50000,
+    unidad: 'kg',
+    consumoDiario: 4100,
+    proveedor: { nombre: 'Cementos Avellaneda', telefono: '+54 9 2271 40-2211' },
+  },
+  {
+    nombre: 'Arena',
+    restante: 41000,
+    capacidad: 80000,
+    unidad: 'kg',
+    consumoDiario: 3600,
+    proveedor: { nombre: 'Arenera del Salado', telefono: '+54 9 2241 33-7788' },
+  },
+  {
+    nombre: 'Piedra',
+    restante: 58000,
+    capacidad: 80000,
+    unidad: 'kg',
+    consumoDiario: 3000,
+    proveedor: { nombre: 'Canteras Monte', telefono: '+54 9 2271 45-9010' },
+  },
 ];

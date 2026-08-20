@@ -1,12 +1,22 @@
+import { ActualizacionEnVivo } from '@/components/app/actualizacion-en-vivo';
+import { AlertaResoluble } from '@/components/app/alerta-resoluble';
+import { BarraSuperior } from '@/components/app/barra-superior';
 import { Alerta } from '@/components/dominio/alerta';
 import { BarraDesvio } from '@/components/dominio/barra-desvio';
-import { Cifra } from '@/components/dominio/cifra';
 import { Estado, MarcaFiscal } from '@/components/dominio/estado';
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import { SemaforoStock } from '@/components/dominio/semaforo-stock';
 import { TarjetaKpi } from '@/components/dominio/tarjeta-kpi';
-import { BarraSuperior } from '@/components/app/barra-superior';
 import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { traerInicio } from '@/lib/datos/inicio';
 import { $, dec, hora } from '@/lib/formato';
 
@@ -16,9 +26,12 @@ import { $, dec, hora } from '@/lib/formato';
  * Spec: orka-brain/clientes/hormigonera-jose/especificaciones/
  *       2026-08-18-apartado-1-inicio.md
  *
- * Una sola regla la gobierna: si no es de hoy o no requiere acción, no va
- * acá. Y se abre en el celular — José la mira desde el auto, no desde un
- * escritorio.
+ * Una sola regla la gobierna: si no es de hoy o no requiere acción, no va acá.
+ *
+ * ⚠️ La spec dice móvil primero (R5) y su criterio de terminado pide que se
+ * entienda sin scrollear en el celular. Se está construyendo **escritorio
+ * primero** por decisión de Lau (20/08): primero toda la web en escritorio,
+ * después la pasada de móvil. La spec queda desalineada a propósito.
  */
 
 // Los datos se derivan del momento de la consulta: sin esto, el build
@@ -40,24 +53,33 @@ export default async function Inicio() {
     <>
       <BarraSuperior />
 
-      <main className="mx-auto max-w-6xl px-4 pt-5 pb-16 sm:px-6">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-          Resumen del día
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm first-letter:uppercase">
-          {fecha}
-          {d.planta.ultimaCarga && ` · última carga a las ${hora(d.planta.ultimaCarga)}`}
-        </p>
+      <main className="mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-8">
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+          <div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+              Resumen del día
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm first-letter:uppercase">
+              {fecha}
+              {d.planta.ultimaCarga && ` · última carga a las ${hora(d.planta.ultimaCarga)}`}
+            </p>
+          </div>
+          <ActualizacionEnVivo />
+        </div>
 
         {/* R4 — El silencio también es información. Si la planta no manda
             datos, eso va antes que cualquier número: los de abajo están
             incompletos y hay que decirlo. */}
         {sinDatos && (
-          <div className="mt-5">
+          <div className="mt-6">
             <Alerta
               titulo={sinDatos.titulo}
               tono={sinDatos.tono}
-              accion={<Button variant="outline" size="sm">{sinDatos.accion}</Button>}
+              accion={
+                <Button variant="outline" size="sm" disabled title="Sin diagnóstico todavía">
+                  {sinDatos.accion}
+                </Button>
+              }
             >
               {sinDatos.detalle}
             </Alerta>
@@ -65,7 +87,7 @@ export default async function Inicio() {
         )}
 
         {/* Cómo viene el día. Tres números y nada más. */}
-        <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <section className="mt-6 grid gap-4 sm:grid-cols-3">
           <TarjetaKpi
             rotulo="Cargas del día"
             valor={d.hoy.cargas}
@@ -78,16 +100,11 @@ export default async function Inicio() {
             }
           />
           <TarjetaKpi rotulo="Producción" valor={dec(d.hoy.m3)} unidad="m³" pie="hormigón elaborado" />
-          <TarjetaKpi
-            rotulo="Facturado"
-            valor={$(d.hoy.facturado)}
-            pie="de las cargas asignadas"
-            className="col-span-2 lg:col-span-1"
-          />
+          <TarjetaKpi rotulo="Facturado" valor={$(d.hoy.facturado)} pie="de las cargas asignadas" />
         </section>
 
-        {/* Qué requiere que haga algo. */}
-        <section className="mt-8">
+        {/* Qué requiere que haga algo. Cada alerta se resuelve acá mismo. */}
+        <section className="mt-9">
           <h2 className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
             Requiere acción
           </h2>
@@ -102,28 +119,16 @@ export default async function Inicio() {
           ) : (
             <div className="mt-3 space-y-3">
               {resto.map((a) => (
-                <Alerta
-                  key={a.id}
-                  titulo={a.titulo}
-                  tono={a.tono}
-                  accion={
-                    <Button variant="outline" size="sm" disabled title="El apartado todavía no está construido">
-                      {a.accion}
-                    </Button>
-                  }
-                >
-                  {a.detalle}
-                </Alerta>
+                <AlertaResoluble key={a.id} alerta={a} />
               ))}
             </div>
           )}
         </section>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-          {/* Las últimas cargas. En el celular no es una tabla: es una lista. */}
+        <div className="mt-9 grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <section>
             <h2 className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
-              Últimas cargas
+              Cargas de hoy
             </h2>
 
             {d.ultimas.length === 0 ? (
@@ -134,39 +139,63 @@ export default async function Inicio() {
                 />
               </div>
             ) : (
-              <ul className="border-line bg-panel mt-3 divide-y divide-[var(--line)] overflow-hidden rounded-xl border">
-                {d.ultimas.map((c) => {
-                  const cemento = c.pesadas.find((p) => p.material === 'Cemento');
-                  return (
-                    <li
-                      key={c.id}
-                      className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 p-3.5 sm:grid-cols-[auto_1fr_auto_6rem_auto_auto]"
-                    >
-                      <span className="text-muted-foreground font-mono text-sm tabular-nums">
-                        {hora(c.momento)}
-                      </span>
-                      <span className="min-w-0 truncate text-sm font-medium">
-                        {c.cliente ?? <span className="text-warn-text">Sin asignar</span>}
-                        <span className="text-faint ml-1.5 hidden font-mono text-xs sm:inline">{c.receta}</span>
-                      </span>
-                      <Cifra valor={c.m3} unidad="m³" tamano="sm" />
-                      {cemento ? (
-                        <span className="hidden sm:block" title="Desvío del cemento">
-                          <BarraDesvio objetivo={cemento.objetivo} real={cemento.real} />
-                        </span>
-                      ) : (
-                        <span className="hidden sm:block" />
-                      )}
-                      <span className="col-start-2 text-sm tabular-nums sm:col-start-auto sm:text-right">
-                        {c.total ? $(c.total) : <span className="text-faint">—</span>}
-                      </span>
-                      <span className="justify-self-end">
-                        {c.fiscal && <MarcaFiscal tipo={c.fiscal} />}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="border-line bg-panel mt-3 overflow-x-auto rounded-xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Hora</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead className="text-right">m³</TableHead>
+                      <TableHead className="text-right">Cemento</TableHead>
+                      <TableHead>Desvío</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>Estado</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {d.ultimas.map((c) => {
+                      const cem = c.pesadas.find((p) => p.material === 'Cemento');
+                      return (
+                        <TableRow key={c.id}>
+                          <TableCell className="text-muted-foreground font-mono tabular-nums">
+                            {hora(c.momento)}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {c.cliente ?? <span className="text-warn-text">Sin asignar</span>}
+                            <span className="text-faint ml-1.5 font-mono text-xs">{c.receta}</span>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{c.m3}</TableCell>
+                          <TableCell className="text-right font-mono tabular-nums">
+                            {cem ? cem.real.toLocaleString('es-AR') : '—'}
+                          </TableCell>
+                          <TableCell className="w-28">
+                            {cem && <BarraDesvio objetivo={cem.objetivo} real={cem.real} />}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {c.total ? $(c.total) : <span className="text-faint">—</span>}
+                          </TableCell>
+                          <TableCell>
+                            {c.fiscal ? (
+                              <MarcaFiscal tipo={c.fiscal} />
+                            ) : (
+                              <Estado tono="warn">Sin cliente</Estado>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={2}>Total del día</TableCell>
+                      <TableCell className="text-right tabular-nums">{d.hoy.m3}</TableCell>
+                      <TableCell colSpan={2} />
+                      <TableCell className="text-right tabular-nums">{$(d.hoy.facturado)}</TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              </div>
             )}
           </section>
 
@@ -175,7 +204,7 @@ export default async function Inicio() {
             <h2 className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
               Materiales
             </h2>
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
               {d.materiales.map((m) => (
                 <SemaforoStock
                   key={m.nombre}
