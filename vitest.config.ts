@@ -20,6 +20,18 @@ export default defineConfig({
   },
   test: {
     projects: [
+      // Las funciones puras del dominio. Corren en node y sin navegador:
+      // son cálculo, no pintura. Las historias de Storybook cubren "esto
+      // se ve"; esto cubre "esto da bien", que es donde de verdad se
+      // rompe un total.
+      {
+        extends: true,
+        test: {
+          name: 'unidad',
+          environment: 'node',
+          include: ['lib/**/*.test.ts'],
+        },
+      },
       {
         extends: true,
         plugins: [

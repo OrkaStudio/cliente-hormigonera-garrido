@@ -12,7 +12,8 @@
     "build-storybook": "storybook build",
     "test": "vitest run",
     "planta": "node simulador/planta.js",
-    "verificar": "node simulador/verificar.js"
+    "verificar": "node simulador/verificar.js",
+    "desborde": "node scripts/desborde.mjs"
   },
   "dependencies": {
     "next": "15.5.14",
