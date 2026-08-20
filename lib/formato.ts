@@ -36,6 +36,24 @@ export const fechaCorta = (dia: string) =>
     month: "2-digit",
   });
 
+/**
+ * Un momento ISO como fecha corta: 14/08. Para columnas de listado.
+ *
+ * Va sin "hace 3 días" a propósito: el texto relativo se calcula contra
+ * el reloj y en una página renderizada en el servidor no coincide con el
+ * del navegador. Una fecha no miente nunca.
+ */
+export const fechaDeMomento = (iso: string) =>
+  new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
+
+/** La fecha completa de un momento ISO: jueves, 20 de agosto. */
+export const fechaLargaDeMomento = (iso: string) =>
+  new Date(iso).toLocaleDateString("es-AR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
 /** Un desvío con signo: +8 kg / −3 kg. */
 export const signo = (n: number, unidad = "kg") =>
   `${n > 0 ? "+" : n < 0 ? "−" : ""}${numero.format(Math.abs(n))} ${unidad}`;

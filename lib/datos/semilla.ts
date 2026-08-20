@@ -64,6 +64,28 @@ export const CLIENTES: Cliente[] = [
     notas: null,
     activo: true,
   },
+  {
+    id: 'CL-05',
+    nombre: 'Mostrador',
+    contacto: null,
+    telefono: null,
+    mail: null,
+    direccion: null,
+    cuit: null,
+    notas: 'La venta suelta que no justifica dar de alta a nadie (R4). No se borra ni se edita.',
+    activo: true,
+  },
+  {
+    id: 'CL-06',
+    nombre: 'Pérez Construcciones',
+    contacto: 'Hugo Pérez',
+    telefono: '2241 15-44-8890',
+    mail: null,
+    direccion: 'Sarmiento 47, Monte',
+    cuit: '20-13290477-1',
+    notas: 'Dejó de comprar en marzo. Se desactiva, no se borra: sus ventas siguen en el historial.',
+    activo: false,
+  },
 ];
 
 const RECETAS: Record<string, { m3PorCarga: number; precio: number; cemento: number; arena: number; piedra: number }> = {
@@ -111,8 +133,12 @@ export function generarCargas(ahora: Date): Carga[] {
       const deriva = 0.006 + (6 - dia) * 0.0022;
       const ruido = () => (rnd() - 0.5) * 0.004;
 
+      // Quién puede comprar en este día. El inactivo sólo aparece en las
+      // cargas viejas: dejó de comprar, pero su historial sigue ahí — que
+      // es exactamente lo que la R1 promete y hay que poder ver.
+      const compradores = CLIENTES.filter((c) => c.activo || dia >= 4);
       const sinCliente = esHoy && i === 2;
-      const cliente = sinCliente ? null : CLIENTES[Math.floor(rnd() * CLIENTES.length)]!;
+      const cliente = sinCliente ? null : compradores[Math.floor(rnd() * compradores.length)]!;
       const clienteId = cliente?.id ?? null;
 
       cargas.push({
