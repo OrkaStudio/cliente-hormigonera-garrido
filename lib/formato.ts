@@ -15,10 +15,12 @@ export const num = (n: number) => numero.format(n);
 export const dec = (n: number) => decimal.format(n);
 export const kg = (n: number) => `${numero.format(n)} kg`;
 
+/** 24 horas, siempre. En una planta el turno es "14:20", no "02:20 p. m.". */
 export const hora = (iso: string) =>
   new Date(iso).toLocaleTimeString("es-AR", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   });
 
 export const fechaLarga = (dia: string) =>
