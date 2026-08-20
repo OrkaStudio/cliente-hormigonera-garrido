@@ -1,4 +1,4 @@
-import type { Carga, Material } from './tipos';
+import type { Carga, Cliente, Material } from './tipos';
 
 /**
  * Datos sembrados.
@@ -13,11 +13,57 @@ import type { Carga, Material } from './tipos';
  * a salir en producción. Si alguien toca el umbral, la alerta responde.
  */
 
-const CLIENTES = [
-  'Constructora del Este SRL',
-  'Obras Monte SA',
-  'Corralón El Ladrillo',
-  'Riquelme e Hijos',
+/**
+ * Los clientes son entidades con id, no un nombre suelto adentro de la
+ * carga: es `cargas.cliente_id` lo que ata las dos cosas (apartado 4,
+ * sección 6). Atarlas por el nombre se desarma apenas alguien renombre
+ * un cliente o entren dos parecidos.
+ */
+export const CLIENTES: Cliente[] = [
+  {
+    id: 'CL-01',
+    nombre: 'Constructora del Este SRL',
+    contacto: 'Marcelo Duarte',
+    telefono: '2241 40-1180',
+    mail: 'compras@constructoradeleste.com.ar',
+    direccion: 'Av. San Martín 1240, Monte',
+    cuit: '30-71044821-9',
+    notas: null,
+    activo: true,
+  },
+  {
+    id: 'CL-02',
+    nombre: 'Obras Monte SA',
+    contacto: 'Silvia Ferraro',
+    telefono: '2241 41-2907',
+    mail: 'administracion@obrasmonte.com.ar',
+    direccion: 'Ruta 3 km 108, Monte',
+    cuit: '30-70918334-2',
+    notas: null,
+    activo: true,
+  },
+  {
+    id: 'CL-03',
+    nombre: 'Corralón El Ladrillo',
+    contacto: 'Rubén Ibáñez',
+    telefono: '2241 15-63-4402',
+    mail: null,
+    direccion: 'Belgrano 855, Monte',
+    cuit: '20-16884203-4',
+    notas: null,
+    activo: true,
+  },
+  {
+    id: 'CL-04',
+    nombre: 'Riquelme e Hijos',
+    contacto: 'Daniel Riquelme',
+    telefono: '2241 15-70-1156',
+    mail: null,
+    direccion: 'Chacabuco 320, Monte',
+    cuit: null,
+    notas: null,
+    activo: true,
+  },
 ];
 
 const RECETAS: Record<string, { m3PorCarga: number; precio: number; cemento: number; arena: number; piedra: number }> = {
@@ -67,13 +113,14 @@ export function generarCargas(ahora: Date): Carga[] {
 
       const sinCliente = esHoy && i === 2;
       const cliente = sinCliente ? null : CLIENTES[Math.floor(rnd() * CLIENTES.length)]!;
+      const clienteId = cliente?.id ?? null;
 
       cargas.push({
         id: `C-${1000 + cargas.length}`,
         momento: momento.toISOString(),
         receta,
         m3: r.m3PorCarga,
-        cliente,
+        clienteId,
         estado: sinCliente ? 'registrada' : dia === 0 ? 'asignada' : 'facturada',
         fiscal: sinCliente ? null : rnd() > 0.35 ? 'blanco' : 'negro',
         total: sinCliente ? 0 : Math.round(r.m3PorCarga * r.precio),

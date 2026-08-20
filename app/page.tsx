@@ -184,7 +184,7 @@ export default async function Inicio({
                   <TableBody>
                     {d.ultimas.map((c) => {
                       const cem = c.pesadas.find((p) => p.material === 'Cemento');
-                      const accionable = !c.cliente;
+                      const accionable = !c.clienteId;
                       return (
                         <TableRow
                           key={c.id}
@@ -201,7 +201,7 @@ export default async function Inicio({
                             {hora(c.momento)}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {c.cliente ?? <span className="text-warn-text">Sin asignar</span>}
+                            {c.clienteNombre ?? <span className="text-warn-text">Sin asignar</span>}
                             <span className="text-faint ml-1.5 font-mono text-xs">{c.receta}</span>
                           </TableCell>
                           <TableCell className="text-right tabular-nums">{c.m3}</TableCell>

@@ -1,6 +1,18 @@
 import { derivarAlertas, estadoDePlanta } from '@/lib/dominio/alertas';
-import { MATERIALES, generarCargas } from './semilla';
+import { CLIENTES, MATERIALES, generarCargas } from './semilla';
 import type { Carga } from './tipos';
+
+/**
+ * La carga guarda el id del cliente; la pantalla necesita el nombre.
+ * Resolverlo es trabajo de la capa de datos, no de la vista — el día que
+ * entre Supabase esto es un join y la pantalla no se entera.
+ */
+function conNombreDeCliente(carga: Carga) {
+  return {
+    ...carga,
+    clienteNombre: CLIENTES.find((c) => c.id === carga.clienteId)?.nombre ?? null,
+  };
+}
 
 /**
  * La consulta de Inicio.
@@ -48,9 +60,12 @@ export async function traerInicio(rango: Rango = 'hoy', ahora = new Date()) {
       cargas: deHoy.length,
       m3: deHoy.reduce((a, c) => a + c.m3, 0),
       facturado: deHoy.reduce((a, c) => a + c.total, 0),
-      sinAsignar: deHoy.filter((c) => !c.cliente).length,
+      sinAsignar: deHoy.filter((c) => !c.clienteId).length,
     },
-    ultimas: [...deHoy].reverse().slice(0, rango === 'hoy' ? 8 : 12) as Carga[],
+    ultimas: [...deHoy]
+      .reverse()
+      .slice(0, rango === 'hoy' ? 8 : 12)
+      .map(conNombreDeCliente),
     /** Cuántas hay en total en el rango, para no mentir con el pie de tabla. */
     totalCargas: deHoy.length,
   };
