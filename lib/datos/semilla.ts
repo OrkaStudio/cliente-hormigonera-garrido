@@ -51,10 +51,15 @@ export function generarCargas(ahora: Date): Carga[] {
       const receta = nombresReceta[Math.floor(rnd() * nombresReceta.length)]!;
       const r = RECETAS[receta]!;
       const momento = new Date(fecha);
-      momento.setHours(7 + i * 2, Math.floor(rnd() * 55), 0, 0);
-
-      // Hoy no se produce en el futuro.
-      if (esHoy && momento > ahora) break;
+      if (esHoy) {
+        // Las cargas de hoy se reparten hacia atrás desde hace ~35 min, para
+        // que la pantalla muestre una planta produciendo y no una que dejó
+        // de mandar datos hace horas. La alerta de silencio de la R4 sigue
+        // saliendo del cálculo: si el reloj avanza y no entran cargas, salta.
+        momento.setTime(ahora.getTime() - (35 + (cuantas - 1 - i) * 105) * 60_000);
+      } else {
+        momento.setHours(7 + i * 2, Math.floor(rnd() * 55), 0, 0);
+      }
 
       // La deriva de la balanza de cemento: crece con los días.
       const deriva = 0.006 + (6 - dia) * 0.0022;
