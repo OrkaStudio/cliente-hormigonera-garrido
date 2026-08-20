@@ -27,13 +27,32 @@ export interface Carga {
   momento: string;
   receta: string;
   m3: number;
-  cliente: string | null;
+  /** Null mientras la carga está pendiente de asignación. */
+  clienteId: string | null;
   estado: EstadoCarga;
   fiscal: Fiscal | null;
   total: number;
   pesadas: PesadaMaterial[];
   /** Valores fuera de rango razonable: se marca, no se rechaza. */
   sospechosa?: boolean;
+}
+
+export interface Cliente {
+  id: string;
+  nombre: string;
+  contacto: string | null;
+  telefono: string | null;
+  mail: string | null;
+  /** Para el encabezado del documento. */
+  direccion: string | null;
+  cuit: string | null;
+  notas: string | null;
+  /**
+   * Un cliente con ventas no se borra nunca (R1 del apartado 4): si se
+   * borrara, su historial de cargas quedaría huérfano. Se desactiva y
+   * deja de aparecer al asignar.
+   */
+  activo: boolean;
 }
 
 export interface Material {

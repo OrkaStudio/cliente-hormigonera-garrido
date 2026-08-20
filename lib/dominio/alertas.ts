@@ -124,7 +124,7 @@ export function derivarAlertas(
     });
   }
 
-  const sinAsignar = cargas.filter((c) => c.estado === 'registrada' && !c.cliente);
+  const sinAsignar = cargas.filter((c) => c.estado === 'registrada' && !c.clienteId);
   if (sinAsignar.length > 0) {
     const m3 = sinAsignar.reduce((a, c) => a + c.m3, 0);
     alertas.push({
