@@ -50,3 +50,11 @@ coverage/
 
 # Storybook
 storybook-static
+
+# Supabase CLI (cache local, no va al repo)
+supabase/.temp/
+supabase/.branches/
+
+# Storybook
+debug-storybook.log
+storybook-static/

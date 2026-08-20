@@ -57,10 +57,5 @@
   },
   "overrides": {
     "aria-query": "5.3.2"
-  },
-  "pnpm": {
-    "overrides": {
-      "aria-query": "5.3.2"
-    }
   }
 }

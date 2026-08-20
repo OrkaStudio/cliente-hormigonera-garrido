@@ -24,10 +24,10 @@ export const fondoPorTono: Record<Tono, string> = {
 
 export const barraPorTono: Record<Tono, string> = {
   neutro: 'bg-line-strong',
-  ok: 'bg-ok-soft0',
-  warn: 'bg-warn-soft0',
-  danger: 'bg-danger-soft0',
-  plc: 'bg-plc-soft0',
+  ok: 'bg-ok',
+  warn: 'bg-warn',
+  danger: 'bg-danger',
+  plc: 'bg-plc',
 };
 
 /**
