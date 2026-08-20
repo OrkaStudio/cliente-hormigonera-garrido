@@ -2,18 +2,30 @@
 @import "tw-animate-css";
 
 /* ============================================================
-   Hormigonera Garrido — tema PROVISORIO
-   Portado de clientes/hormigonera-jose/assets/apartados-*.html
-   (la paleta con la que están dibujadas las nueve maquetas).
+   Hormigonera Garrido — sistema de diseño
 
-   Estructura de dos capas, igual que cliente-risso-agro:
+   Estructura de dos capas (la que dejó armada el andamiaje):
      @theme inline  → los NOMBRES semánticos que consumen los
                       componentes. Esta capa es compartida.
-     :root          → los VALORES de este cliente. Esto es lo
-                      único que cambia cuando aterrice el design
-                      system de Orka.
+     :root          → los VALORES de este cliente.
 
    Regla: ningún componente escribe un hex ni un nombre de fuente.
+
+   ── 19/08: aterrizaron los valores de marca ──────────────────
+   El tema provisorio venía portado de las maquetas HTML y no
+   tenía rojo en ninguna parte, aunque la empresa ES roja. Se
+   muestreó el logo (rojo #da251b, negro #1c1a19) y se reemplazó
+   el acento ámbar por el rojo real.
+
+   De ahí salen tres reglas:
+
+   1. Hay UN solo rojo. Es el de la marca y adentro de los datos
+      significa alarma. No conviven dos rojos parecidos con
+      significados distintos.
+   2. El primario es negro (que es el negro del logo), no un color.
+      Los botones no compiten con los semáforos.
+   3. El color se reserva para el ESTADO. Si un elemento no
+      comunica un estado, va en neutro.
    ============================================================ */
 
 @custom-variant dark (&:is(.dark *));
@@ -34,10 +46,35 @@
     --color-line-strong: var(--line-strong);
     --color-accent-soft: var(--accent-soft);
     --color-on-accent: var(--on-accent);
+
+    /* Marca */
+    --color-marca: var(--marca);
+
+    /* Severidad — tres estados, cada uno con relleno, tinte y texto.
+       El relleno nunca se usa para texto: no llega al contraste que
+       pide la norma sobre el fondo. Para texto, siempre *-text. */
     --color-ok: var(--ok);
     --color-ok-soft: var(--ok-soft);
+    --color-ok-text: var(--ok-text);
+    --color-ok-wash: var(--ok-wash);
+
     --color-warn: var(--warn);
     --color-warn-soft: var(--warn-soft);
+    --color-warn-text: var(--warn-text);
+    --color-warn-wash: var(--warn-wash);
+
+    --color-danger: var(--danger);
+    --color-danger-soft: var(--danger-soft);
+    --color-danger-text: var(--danger-text);
+    --color-danger-wash: var(--danger-wash);
+
+    /* Dato del PLC. Codifica una sola cosa: "esto lo pidió el
+       autómata". Nunca aparece en algo clickeable — un color de dato
+       y uno de acción que son el mismo hacen que nadie sepa qué se
+       puede tocar. */
+    --color-plc: var(--plc);
+    --color-plc-soft: var(--plc-soft);
+    --color-plc-text: var(--plc-text);
 
     /* Semánticos (shadcn) */
     --color-background: var(--background);
@@ -59,6 +96,12 @@
     --color-input: var(--input);
     --color-ring: var(--ring);
 
+    /* Sombra: tres niveles y ninguno más. No decora — dice a qué
+       altura está la superficie. */
+    --shadow-tarjeta: var(--sombra-tarjeta);
+    --shadow-elevada: var(--sombra-elevada);
+    --shadow-flotante: var(--sombra-flotante);
+
     --radius-sm: calc(var(--radius) * 0.5);
     --radius-md: calc(var(--radius) * 0.72);
     --radius-lg: var(--radius);
@@ -71,6 +114,11 @@
     --display: var(--font-space-grotesk), "Segoe UI", sans-serif;
     --mono: var(--font-jetbrains-mono), Consolas, ui-monospace, monospace;
 
+    /* Muestreados del logo de Hormimonte SRL. El negro de la marca es
+       prácticamente la misma tinta que ya usaba el texto, así que la
+       identidad entra sin pelearse con la lectura. */
+    --marca: #DA251B;
+
     --ink: #17140F;
     --ink-soft: #4A4238;
     --faint: #978E80;
@@ -79,12 +127,34 @@
     --sunk: #F4F1EB;
     --line: #E5DFD5;
     --line-strong: #D3CABC;
-    --accent-soft: #FCEEDB;
+    --accent-soft: #FDECEA;
     --on-accent: #FFFFFF;
+
+    /* Dentro de tolerancia: desvío ≤ 1%, stock normal, venta cerrada. */
     --ok: #2E7D5B;
     --ok-soft: #E4F1EA;
-    --warn: #B4531A;
-    --warn-soft: #FBE9DC;
+    --ok-text: #1C4C38;
+    --ok-wash: color-mix(in oklch, var(--ok) 10%, transparent);
+
+    /* Atención: desvío 1–3%, stock bajo, carga sin cliente. */
+    --warn: #B57A0B;
+    --warn-soft: #FBF0DA;
+    --warn-text: #6E4907;
+    --warn-wash: color-mix(in oklch, var(--warn) 10%, transparent);
+
+    /* Alarma: desvío > 3%, quiebre de stock, carga anulada.
+       Es el rojo de la marca. El relleno da 4,44:1 sobre el fondo —
+       alcanza con blanco encima (4,93:1), no para texto oscuro sobre
+       claro; por eso existe --danger-text, que da 6,75:1. */
+    --danger: var(--marca);
+    --danger-soft: #FDEEEC;
+    --danger-text: #A51F14;
+    --danger-wash: color-mix(in oklch, var(--marca) 10%, transparent);
+
+    /* El dato que viene del PLC. */
+    --plc: #356F97;
+    --plc-soft: #F0F5F9;
+    --plc-text: #1F4460;
 
     --background: #FAF8F4;
     --foreground: #17140F;
@@ -92,23 +162,39 @@
     --card-foreground: #17140F;
     --popover: #FFFFFF;
     --popover-foreground: #17140F;
+
+    /* Negro, no un color: que el botón no compita con el semáforo. */
     --primary: #17140F;
     --primary-foreground: #FAF8F4;
     --secondary: #F4F1EB;
     --secondary-foreground: #17140F;
     --muted: #F4F1EB;
     --muted-foreground: #6E6558;
-    --accent: #D97206;
+
+    /* El rojo de marca vive acá: anillo de foco, navegación activa,
+       el logotipo de la barra superior. Nunca como fondo de una fila
+       seleccionada — ahí leería como error. */
+    --accent: var(--marca);
     --accent-foreground: #FFFFFF;
-    --destructive: #B4531A;
+
+    /* Más oscuro que el rojo pleno para que el texto blanco encima
+       llegue a 6,5:1. */
+    --destructive: #B3271A;
+
     --border: #E5DFD5;
     --input: #D3CABC;
-    --ring: #D97206;
+    --ring: var(--marca);
+
+    --sombra-tarjeta:  0 1px 2px rgb(23 20 15 / 0.04), 0 1px 1px rgb(23 20 15 / 0.03);
+    --sombra-elevada:  0 4px 12px rgb(23 20 15 / 0.06), 0 1px 2px rgb(23 20 15 / 0.04);
+    --sombra-flotante: 0 12px 32px rgb(23 20 15 / 0.12), 0 2px 6px rgb(23 20 15 / 0.06);
 
     --radius: 0.75rem;
 }
 
 .dark {
+    --marca: #F2493E;
+
     --ink: #F1EDE6;
     --ink-soft: #C9C1B5;
     --faint: #756D61;
@@ -117,12 +203,27 @@
     --sunk: #221E17;
     --line: #302B22;
     --line-strong: #423B2F;
-    --accent-soft: #33260F;
+    --accent-soft: #331512;
     --on-accent: #17140F;
+
     --ok: #6DBF97;
     --ok-soft: #16281F;
-    --warn: #E0864A;
-    --warn-soft: #2E1D11;
+    --ok-text: #8FD4B2;
+    --ok-wash: color-mix(in oklch, var(--ok) 14%, transparent);
+
+    --warn: #E0A64A;
+    --warn-soft: #2E2311;
+    --warn-text: #EFC272;
+    --warn-wash: color-mix(in oklch, var(--warn) 14%, transparent);
+
+    --danger: var(--marca);
+    --danger-soft: #2E1412;
+    --danger-text: #F58A80;
+    --danger-wash: color-mix(in oklch, var(--marca) 14%, transparent);
+
+    --plc: #7FB0D0;
+    --plc-soft: #14212B;
+    --plc-text: #A9CBE1;
 
     --background: #131109;
     --foreground: #F1EDE6;
@@ -136,12 +237,12 @@
     --secondary-foreground: #F1EDE6;
     --muted: #221E17;
     --muted-foreground: #9B9284;
-    --accent: #F2951F;
-    --accent-foreground: #17140F;
-    --destructive: #E0864A;
+    --accent: var(--marca);
+    --accent-foreground: #FFFFFF;
+    --destructive: #E0554A;
     --border: #302B22;
     --input: #423B2F;
-    --ring: #F2951F;
+    --ring: var(--marca);
 }
 
 @layer base {
@@ -151,6 +252,13 @@
         font-family: var(--font-sans);
         -webkit-font-smoothing: antialiased;
     }
-    /* Los números son instrumento de medición: siempre tabulares. */
-    .tabular { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    /* Los números son instrumento de medición: siempre tabulares.
+       Sin ancho fijo por dígito, una columna de kilos o de pesos baila
+       y deja de poder compararse de un vistazo — que es lo único que
+       se hace con este tablero. */
+    .tabular,
+    .num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+    }
 }

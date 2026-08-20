@@ -1,0 +1,63 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Fundamentos/Semáforo" />
+
+# Semáforo
+
+El color de estado se decide en un solo lugar: `components/dominio/tono.ts`.
+Ningún componente elige un color; elige un **tono**, y el sistema resuelve cómo
+se ve. Si mañana cambia el rojo, cambia ahí y en toda la aplicación.
+
+## Los cinco tonos
+
+<div className="my-6 flex flex-col gap-2">
+  <div className="border-line bg-sunk text-ink-soft flex items-center gap-3 rounded-lg border p-3">
+    <code className="w-24 shrink-0 text-sm">neutro</code>
+    <span className="text-sm">Sin juicio de valor. El estado por defecto.</span>
+  </div>
+  <div className="border-ok/30 bg-ok-soft text-ok-text flex items-center gap-3 rounded-lg border p-3">
+    <code className="w-24 shrink-0 text-sm">ok</code>
+    <span className="text-sm">Dentro de tolerancia. Nada que hacer.</span>
+  </div>
+  <div className="border-warn/30 bg-warn-soft text-warn-text flex items-center gap-3 rounded-lg border p-3">
+    <code className="w-24 shrink-0 text-sm">warn</code>
+    <span className="text-sm">Mirar cuando puedas. No frena la producción.</span>
+  </div>
+  <div className="border-danger/30 bg-danger-soft text-danger-text flex items-center gap-3 rounded-lg border p-3">
+    <code className="w-24 shrink-0 text-sm">danger</code>
+    <span className="text-sm">Está costando plata ahora. Requiere acción.</span>
+  </div>
+  <div className="border-plc/30 bg-plc-soft text-plc-text flex items-center gap-3 rounded-lg border p-3">
+    <code className="w-24 shrink-0 text-sm">plc</code>
+    <span className="text-sm">Dato del PLC. No es un estado, es una procedencia.</span>
+  </div>
+</div>
+
+## Los umbrales de desvío
+
+La función `tonoDeDesvio(objetivo, real)` es la única que decide cuándo un
+desvío de balanza pasa de ruido a problema:
+
+| Desvío contra el objetivo del PLC | Tono | Lectura |
+|---|---|---|
+| hasta 1% | `ok` | Ruido normal de pesaje |
+| entre 1% y 3% | `warn` | Empezar a mirar el patrón |
+| más de 3% | `danger` | La balanza está corrida |
+
+<div className="bg-warn-soft border-warn/30 text-warn-text my-6 rounded-lg border p-4 text-sm">
+  <strong>Los umbrales son provisorios.</strong> Están puestos a criterio nuestro para poder
+  construir. Hay que confirmarlos con José y con el ingeniero de GENROD antes de que esto
+  llegue a la planta: 1% de cemento en un pastón de 8 m³ es plata real, y el número correcto
+  lo sabe quien opera.
+</div>
+
+## Los umbrales de stock
+
+| Proporción del silo | Tono |
+|---|---|
+| más del 25% | `ok` |
+| entre 10% y 25% | `warn` |
+| 10% o menos | `danger` |
+
+Recordatorio que el componente lleva escrito en la cara: **el stock es deducido,
+no medido**. Los silos no tienen balanza.

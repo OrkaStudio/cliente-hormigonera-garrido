@@ -1,3 +1,8 @@
 allowBuilds:
+  '@serialport/bindings-cpp': true
+  esbuild: true
   sharp: true
   unrs-resolver: true
+
+overrides:
+  aria-query: '5.3.2'
