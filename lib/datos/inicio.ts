@@ -12,16 +12,35 @@ import type { Carga } from './tipos';
  * Es async a propósito, aunque hoy no espere nada: si fuera sincrónica,
  * el día que entre la query real habría que cambiar también los llamados.
  */
-export async function traerInicio(ahora = new Date()) {
+export type Rango = 'hoy' | 'semana' | 'mes';
+
+const ETIQUETA: Record<Rango, string> = {
+  hoy: 'de hoy',
+  semana: 'de los últimos 7 días',
+  mes: 'del mes',
+};
+
+/** Desde cuándo cuenta cada rango. */
+function desde(rango: Rango, ahora: Date) {
+  const d = new Date(ahora);
+  d.setHours(0, 0, 0, 0);
+  if (rango === 'semana') d.setDate(d.getDate() - 6);
+  if (rango === 'mes') d.setDate(1);
+  return d;
+}
+
+export async function traerInicio(rango: Rango = 'hoy', ahora = new Date()) {
   const cargas = generarCargas(ahora);
-  const hoy = ahora.toDateString();
-  const deHoy = cargas.filter((c) => new Date(c.momento).toDateString() === hoy);
+  const corte = desde(rango, ahora);
+  const deHoy = cargas.filter((c) => new Date(c.momento) >= corte);
 
   const planta = estadoDePlanta(cargas, ahora);
   const alertas = derivarAlertas(cargas, MATERIALES, ahora);
 
   return {
     ahora,
+    rango,
+    etiquetaRango: ETIQUETA[rango],
     planta,
     alertas,
     materiales: MATERIALES,
@@ -31,7 +50,9 @@ export async function traerInicio(ahora = new Date()) {
       facturado: deHoy.reduce((a, c) => a + c.total, 0),
       sinAsignar: deHoy.filter((c) => !c.cliente).length,
     },
-    ultimas: [...deHoy].reverse().slice(0, 8) as Carga[],
+    ultimas: [...deHoy].reverse().slice(0, rango === 'hoy' ? 8 : 12) as Carga[],
+    /** Cuántas hay en total en el rango, para no mentir con el pie de tabla. */
+    totalCargas: deHoy.length,
   };
 }
 
