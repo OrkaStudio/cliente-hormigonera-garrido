@@ -35,6 +35,7 @@ function cliente(p: Partial<Cliente>): Cliente {
     cuit: null,
     notas: null,
     activo: true,
+    generico: false,
     ...p,
   };
 }

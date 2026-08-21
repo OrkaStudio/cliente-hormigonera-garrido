@@ -1,7 +1,39 @@
 import type { Tono } from '@/components/dominio/tono';
 import type { Carga } from '@/lib/datos/tipos';
 import type { Material } from '@/lib/datos/tipos';
+import { fechaDeMomento, hora } from '@/lib/formato';
 import { UMBRALES } from './umbrales';
+
+/** Dos momentos que caen en el mismo dia del calendario local. */
+function mismoDia(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+/**
+ * Cuando se produjeron estas cargas, dicho sin ambiguedad.
+ *
+ * La alerta de "sin cliente" mira TODO el historico, pero convive en la
+ * pantalla con KPIs que miran solo hoy. Pasada la medianoche eso daba
+ * "CARGAS 0" al lado de "hay una carga sin cliente — 6 m3", que se lee
+ * como una contradiccion. La alerta tiene que datarse.
+ *
+ * Con fecha y no con "ayer": el texto relativo se calcula contra el
+ * reloj y no siempre coincide con el del navegador — el mismo motivo
+ * que ya esta escrito en `fechaDeMomento`.
+ */
+function cuandoFueron(momentos: string[], ahora: Date): string {
+  const fechas = momentos.map((m) => new Date(m)).sort((a, b) => a.getTime() - b.getTime());
+  const primera = fechas[0]!;
+  const ultima = fechas.at(-1)!;
+
+  if (mismoDia(primera, ahora) && mismoDia(ultima, ahora)) return 'hoy';
+  if (mismoDia(primera, ultima)) return `el ${fechaDeMomento(primera.toISOString())}`;
+  return `entre el ${fechaDeMomento(primera.toISOString())} y el ${fechaDeMomento(ultima.toISOString())}`;
+}
 
 /** Costo de referencia del cemento, $/kg. Sale de la última compra (apartado 6). */
 const COSTO_CEMENTO = 186;
@@ -127,6 +159,10 @@ export function derivarAlertas(
   const sinAsignar = cargas.filter((c) => c.estado === 'registrada' && !c.clienteId);
   if (sinAsignar.length > 0) {
     const m3 = sinAsignar.reduce((a, c) => a + c.m3, 0);
+    const cuando = cuandoFueron(
+      sinAsignar.map((c) => c.momento),
+      ahora,
+    );
     alertas.push({
       id: 'sin-asignar',
       tono: 'warn',
@@ -134,17 +170,16 @@ export function derivarAlertas(
         sinAsignar.length === 1
           ? 'Hay una carga sin cliente'
           : `Hay ${sinAsignar.length} cargas sin cliente`,
-      detalle: `${m3} m³ producidos que todavía no son una venta. Sin cliente no hay precio, ni documento, ni margen.`,
+      detalle: `${m3} m³ producidos ${cuando} que todavía no son una venta. Sin cliente no hay precio, ni documento, ni margen.`,
       accion: 'Ver cuáles',
       destino: 'cargas',
       tituloDetalle: 'Cargas esperando cliente',
       filas: sinAsignar.map((c) => ({
         clave: c.id,
-        etiqueta: new Date(c.momento).toLocaleTimeString('es-AR', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        }),
+        // Con la hora sola, una carga de anteayer parecia de esta manana.
+        etiqueta: mismoDia(new Date(c.momento), ahora)
+          ? hora(c.momento)
+          : `${fechaDeMomento(c.momento)} ${hora(c.momento)}`,
         valor: `${c.m3} m³ de ${c.receta}`,
         tono: 'warn' as const,
       })),

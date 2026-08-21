@@ -30,6 +30,7 @@ export const CLIENTES: Cliente[] = [
     cuit: '30-71044821-9',
     notas: null,
     activo: true,
+    generico: false,
   },
   {
     id: 'CL-02',
@@ -41,6 +42,7 @@ export const CLIENTES: Cliente[] = [
     cuit: '30-70918334-2',
     notas: null,
     activo: true,
+    generico: false,
   },
   {
     id: 'CL-03',
@@ -52,6 +54,7 @@ export const CLIENTES: Cliente[] = [
     cuit: '20-16884203-4',
     notas: null,
     activo: true,
+    generico: false,
   },
   {
     id: 'CL-04',
@@ -63,6 +66,7 @@ export const CLIENTES: Cliente[] = [
     cuit: null,
     notas: null,
     activo: true,
+    generico: false,
   },
   {
     id: 'CL-05',
@@ -74,6 +78,7 @@ export const CLIENTES: Cliente[] = [
     cuit: null,
     notas: 'La venta suelta que no justifica dar de alta a nadie (R4). No se borra ni se edita.',
     activo: true,
+    generico: true,
   },
   {
     id: 'CL-06',
@@ -85,6 +90,7 @@ export const CLIENTES: Cliente[] = [
     cuit: '20-13290477-1',
     notas: 'Dejó de comprar en marzo. Se desactiva, no se borra: sus ventas siguen en el historial.',
     activo: false,
+    generico: false,
   },
 ];
 

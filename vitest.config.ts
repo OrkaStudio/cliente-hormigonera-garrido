@@ -26,6 +26,12 @@ export default defineConfig({
       // rompe un total.
       {
         extends: true,
+        // El alias de tsconfig no llega solo a este proyecto: sin esto,
+        // un `import ... from '@/lib/...'` de valor (no de tipo) revienta
+        // al cargar el modulo, y el archivo entero queda sin correr.
+        resolve: {
+          alias: { '@': dirname },
+        },
         test: {
           name: 'unidad',
           environment: 'node',

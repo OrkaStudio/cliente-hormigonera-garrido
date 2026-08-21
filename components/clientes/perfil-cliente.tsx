@@ -106,33 +106,44 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
         bajada={
           <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {!datos.activo && <Estado>Inactivo</Estado>}
+            {datos.generico && <Estado>Venta suelta</Estado>}
             {datos.contacto && <span>{datos.contacto}</span>}
             {datos.telefono && <span className="tabular-nums">{datos.telefono}</span>}
-            {!datos.contacto && !datos.telefono && datos.activo && (
-              <span>Sin datos de contacto cargados.</span>
+            {datos.generico ? (
+              <span>
+                El comprador esporádico que no justifica darle de alta un perfil. No se
+                edita ni se desactiva: si se apaga, las ventas sueltas se quedan sin dónde
+                caer.
+              </span>
+            ) : (
+              !datos.contacto &&
+              !datos.telefono &&
+              datos.activo && <span>Sin datos de contacto cargados.</span>
             )}
           </span>
         }
         acciones={
-          <>
-            <Button variant="outline" onClick={() => setEditando(true)}>
-              <Pencil data-icon="inline-start" />
-              Editar
-            </Button>
-            <Button variant="ghost" onClick={() => setDandoBaja(true)}>
-              {datos.activo ? (
-                <>
-                  <UserMinus data-icon="inline-start" />
-                  Desactivar
-                </>
-              ) : (
-                <>
-                  <UserCheck data-icon="inline-start" />
-                  Reactivar
-                </>
-              )}
-            </Button>
-          </>
+          datos.generico ? null : (
+            <>
+              <Button variant="outline" onClick={() => setEditando(true)}>
+                <Pencil data-icon="inline-start" />
+                Editar
+              </Button>
+              <Button variant="ghost" onClick={() => setDandoBaja(true)}>
+                {datos.activo ? (
+                  <>
+                    <UserMinus data-icon="inline-start" />
+                    Desactivar
+                  </>
+                ) : (
+                  <>
+                    <UserCheck data-icon="inline-start" />
+                    Reactivar
+                  </>
+                )}
+              </Button>
+            </>
+          )
         }
       />
 
