@@ -7,6 +7,12 @@ import {
   variacion,
   type ResumenPeriodo,
 } from '@/lib/dominio/rentabilidad';
+import {
+  costoCombustible,
+  franjaDe,
+  kmDondeSeComeElMargen,
+  FRANJAS,
+} from '@/lib/dominio/combustible';
 
 /**
  * La consulta de Rentabilidad.
@@ -142,9 +148,62 @@ export async function traerRentabilidad(rango: Rango = 'mes', ahora = new Date()
     }))
     .sort((a, b) => b.costo - a.costo);
 
+  // ── El viaje ─────────────────────────────────────────────────────────
+  // Lo que hoy nadie puede contestar: cuánto deja una carga DESPUÉS de
+  // pagar el gasoil de llevarla. Con el mismo precio a doce kilómetros
+  // que a sesenta, las lejanas dejan bastante menos y no se nota.
+  const conKm = delPeriodo.filter((c) => (c.distanciaKm ?? 0) > 0);
+
+  const porFranja = FRANJAS.map((f) => {
+    const cargas = conKm.filter((c) => franjaDe(c.distanciaKm!) === f.etiqueta);
+    if (cargas.length === 0) {
+      return { franja: f.etiqueta, cargas: 0, m3: 0, margenPorM3: 0, combustiblePorM3: 0, netoPorM3: 0 };
+    }
+
+    let margen = 0;
+    let combustible = 0;
+    let m3 = 0;
+    for (const c of cargas) {
+      const r = costoDeCarga(c, (m) => costoEn(m, c.momento));
+      margen += r.margen;
+      combustible += costoCombustible(c.distanciaKm!);
+      m3 += c.m3;
+    }
+
+    return {
+      franja: f.etiqueta,
+      cargas: cargas.length,
+      m3,
+      margenPorM3: m3 ? margen / m3 : 0,
+      combustiblePorM3: m3 ? combustible / m3 : 0,
+      netoPorM3: m3 ? (margen - combustible) / m3 : 0,
+    };
+  }).filter((f) => f.cargas > 0);
+
+  const combustibleTotal = conKm.reduce((a, c) => a + costoCombustible(c.distanciaKm!), 0);
+
+  /** Margen promedio de una carga del período, para el punto de quiebre. */
+  const margenPorCarga = delPeriodo.length
+    ? actual.margenMateriales / delPeriodo.length
+    : 0;
+
   return {
     ahora,
     rango,
+    viaje: {
+      cargasConDistancia: conKm.length,
+      cargasTotales: delPeriodo.length,
+      combustibleTotal,
+      /** Cuánto del margen de materiales se va en gasoil. */
+      pctDelMargen: actual.margenMateriales
+        ? (combustibleTotal / actual.margenMateriales) * 100
+        : 0,
+      kmLimite: kmDondeSeComeElMargen(margenPorCarga),
+      porFranja,
+      kmPromedio: conKm.length
+        ? conKm.reduce((a, c) => a + c.distanciaKm!, 0) / conKm.length
+        : 0,
+    },
     actual,
     previo,
     proporcionDelMes: proporcion,

@@ -100,6 +100,21 @@ export const RECETAS: Record<string, { m3PorCarga: number; precio: number; cemen
   'H-30': { m3PorCarga: 6, precio: 99000, cemento: 380, arena: 730, piedra: 1020 },
 };
 
+/**
+ * Los kilometros que suele haber hasta la obra de cada cliente.
+ *
+ * Sembrados. Cuando Jose cargue la distancia en cada venta, este mapa
+ * desaparece y el numero sale del dato real.
+ */
+const DISTANCIA_TIPICA: Record<string, number> = {
+  'CL-01': 14,
+  'CL-02': 38,
+  'CL-03': 8,
+  'CL-04': 62,
+  'CL-05': 6,
+  'CL-06': 22,
+};
+
 /** Determinista: la misma semilla da siempre la misma planta. */
 function aleatorio(semilla: number) {
   let s = semilla;
@@ -191,6 +206,18 @@ export function generarCargas(ahora: Date): Carga[] {
       const cliente = sinCliente ? null : compradores[Math.floor(rnd() * compradores.length)]!;
       const clienteId = cliente?.id ?? null;
 
+      /**
+       * A que distancia queda la obra de este cliente.
+       *
+       * Cada uno compra para obras que rondan siempre la misma zona, con
+       * algo de variacion: el corralon esta en el pueblo, la constructora
+       * tiene obras repartidas y hay una lejos que es justo la que menos
+       * conviene. Ese contraste es lo que el apartado tiene que dejar ver.
+       */
+      const distanciaKm = sinCliente
+        ? null
+        : Math.round((DISTANCIA_TIPICA[clienteId!] ?? 15) * (0.7 + rnd() * 0.6));
+
       const total = sinCliente ? 0 : Math.round(r.m3PorCarga * precioDelDia);
 
       // Como se reparte el corte fiscal en la maqueta. La mitad va
@@ -219,6 +246,7 @@ export function generarCargas(ahora: Date): Carga[] {
         clienteId,
         estado: sinCliente ? 'registrada' : dia === 0 ? 'asignada' : 'facturada',
         precioM3: sinCliente ? null : precioDelDia,
+        distanciaKm,
         montoFacturado,
         total,
         pesadas: [

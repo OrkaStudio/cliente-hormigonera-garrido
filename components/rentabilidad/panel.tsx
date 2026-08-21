@@ -6,7 +6,7 @@ import { ArrowDownRight, ArrowUpRight, Info, Minus } from 'lucide-react';
 import { BarraSuperior } from '@/components/app/barra-superior';
 import { FiltroRango } from '@/components/app/filtro-rango';
 import { BarrasMes } from '@/components/graficos/barras-mes';
-import { LineaMargen } from '@/components/graficos/linea-margen';
+import { MargenPorDistancia } from '@/components/graficos/margen-por-distancia';
 import { CostosFijos } from '@/components/rentabilidad/costos-fijos';
 import type { DatosRentabilidad } from '@/lib/datos/rentabilidad';
 import { $, dec, num } from '@/lib/formato';
@@ -52,12 +52,6 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
     parcial: m.enCurso,
   }));
 
-  const seriePrecio = d.meses.map((m) => ({
-    etiqueta: m.etiqueta,
-    precio: Math.round(m.resumen.precioPorM3),
-    costo: Math.round(m.resumen.costoPorM3),
-  }));
-
   return (
     <>
       <BarraSuperior activo="Rentabilidad" />
@@ -100,14 +94,12 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
           <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           <span>
             <span className="text-ink font-medium">Margen de materiales:</span> lo facturado
-            menos lo que costaron cemento, arena y piedra. No incluye sueldos, combustible ni
-            mixer — esos se cargan abajo, en costos fijos.
-            {' '}Los costos de material son <span className="text-ink">valores sembrados</span>{' '}
-            hasta que exista el apartado de Compras.
+            menos cemento, arena y piedra. Sueldos y mixer se cargan abajo. Costos de
+            material <span className="text-ink">sembrados</span> hasta que exista Compras.
           </span>
         </p>
 
-        <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <Kpi
             rotulo={`Facturado ${etiquetaPeriodo}`}
             valor={$(d.actual.facturado)}
@@ -137,6 +129,11 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
                 ? 'sin comparación'
                 : `contra ${d.previo.margenPct.toFixed(1).replace('.', ',')}% ${etiquetaPrevio}`
             }
+          />
+          <Kpi
+            rotulo="Gasoil de los viajes"
+            valor={$(Math.round(d.viaje.combustibleTotal))}
+            pie={`${d.viaje.pctDelMargen.toFixed(0)}% del margen · ${Math.round(d.viaje.kmPromedio)} km promedio`}
           />
         </section>
 
@@ -185,14 +182,18 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
           </section>
 
           <section className="border-line bg-panel shadow-tarjeta rounded-xl border p-4">
-            <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
-              Precio y costo por m³
-            </h2>
-            <p className="text-faint mt-1 text-xs">
-              El área verde es el margen. Si se angosta, la inflación se lo está comiendo.
-            </p>
-            <div className="mt-3">
-              <LineaMargen datos={seriePrecio} formato={$$} />
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
+                Qué queda según la distancia
+              </h2>
+              {d.viaje.kmLimite && (
+                <span className="text-faint font-mono text-xs tabular-nums">
+                  se come todo a los {Math.round(d.viaje.kmLimite)} km
+                </span>
+              )}
+            </div>
+            <div className="mt-4">
+              <MargenPorDistancia datos={d.viaje.porFranja} formato={$$} />
             </div>
           </section>
         </div>
@@ -200,11 +201,8 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
         <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_1fr]">
           <section className="border-line bg-panel shadow-tarjeta rounded-xl border p-4">
             <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
-              Qué conviene producir
+              Margen por m³ · receta
             </h2>
-            <p className="text-faint mt-1 text-xs">
-              Ordenado por lo que deja cada m³, no por cuánto se vendió.
-            </p>
             <ul className="mt-3 grid gap-2.5">
               {d.porReceta.map((r) => {
                 const ancho = Math.max(
@@ -234,11 +232,8 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
 
           <section className="border-line bg-panel shadow-tarjeta rounded-xl border p-4">
             <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
-              Dónde se va la plata
+              Costo por material
             </h2>
-            <p className="text-faint mt-1 text-xs">
-              El cemento suele ser el grueso del costo: ahí es donde un desvío chico pesa.
-            </p>
             <ul className="mt-3 grid gap-2.5">
               {d.porMaterial.map((m, i) => (
                 <li key={m.material}>
@@ -272,11 +267,8 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
 
         <section className="border-line bg-panel shadow-tarjeta mt-6 rounded-xl border p-4">
           <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
-            Qué cliente conviene atender
+            Margen por cliente
           </h2>
-          <p className="text-faint mt-1 text-xs">
-            Ordenado por lo que deja, no por cuánto compra. No siempre es el mismo.
-          </p>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -328,7 +320,8 @@ function Kpi({
 }: {
   rotulo: string;
   valor: string;
-  variacion: number | null;
+  /** Sin variación, no se muestra la línea: "sin período anterior" es ruido. */
+  variacion?: number | null;
   pie: string;
   sufijo?: string;
   fuerte?: boolean;
@@ -352,7 +345,7 @@ function Kpi({
         {valor}
       </p>
       <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
-        <Variacion valor={variacion} sufijo={sufijo} />
+        {variacion !== undefined && <Variacion valor={variacion} sufijo={sufijo} />}
         <span className="text-faint text-xs">{pie}</span>
       </div>
     </div>

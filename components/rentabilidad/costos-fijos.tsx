@@ -60,9 +60,8 @@ export function CostosFijos({
 
       {fijos.length === 0 ? (
         <p className="text-muted-foreground mt-2 text-sm">
-          Sueldos, combustible, alquiler, la cuota del mixer. Mientras no estén cargados,
-          arriba se ve el margen de materiales y nada más —{' '}
-          <span className="text-ink">preferimos que falte a inventarlo</span>.
+          Sueldos, alquiler, la cuota del mixer. Sin esto, arriba se ve margen de
+          materiales y nada más.
         </p>
       ) : (
         <>

@@ -47,6 +47,14 @@ export interface Carga {
    */
   precioM3?: number | null;
   /**
+   * A cuantos kilometros de la planta se entrego.
+   *
+   * Ya se anota en el remito porque al chofer le sirve saber el viaje.
+   * Anotarlo en la venta es lo que permite calcular cuanto gasoil costo
+   * llevarla — y con eso, hasta donde conviene ir.
+   */
+  distanciaKm?: number | null;
+  /**
    * Cuanto de esta venta se facturo, EN PESOS.
    *
    * Se guarda el monto y no el porcentaje a proposito. El porcentaje se
