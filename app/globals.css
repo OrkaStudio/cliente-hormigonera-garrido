@@ -178,6 +178,7 @@
     --danger-soft: #FDEEEC;
     --danger-text: #A51F14;
     --danger-wash: color-mix(in oklch, var(--marca) 10%, transparent);
+    --accent-wash: color-mix(in oklch, var(--accent) 12%, transparent);
 
     /* El dato que viene del PLC. */
     --plc: #356F97;
@@ -339,4 +340,64 @@
     .hoja table {
         break-inside: avoid;
     }
+}
+
+
+/* ============================================================
+   El papel del emisor de documentos
+   ============================================================ */
+
+/**
+ * La hoja se ve como una hoja: proporción A4, sombra que la despega del
+ * fondo y un ámbito más oscuro alrededor. No es decoración — José está
+ * por imprimir esto, y una hoja que parece hoja se revisa distinto que
+ * un rectángulo blanco pegado a la pantalla.
+ *
+ * El aspect-ratio es una preferencia, no una jaula: si el documento
+ * lleva muchas líneas, la hoja crece en vez de recortar.
+ */
+.papel {
+  aspect-ratio: 210 / 297;
+  box-shadow: var(--sombra-flotante);
+}
+
+/**
+ * El pulso de "esto acaba de cambiar".
+ *
+ * La promesa de la pantalla es "todo lo que cambies acá se ve en el
+ * papel al instante". Se cumplía, pero sin que se notara: el ojo estaba
+ * en el formulario y el papel cambiaba en silencio. El pulso dice dónde
+ * mirar y se apaga solo.
+ */
+@keyframes pulso-zona {
+  from {
+    background-color: var(--accent-wash);
+    box-shadow: 0 0 0 6px var(--accent-wash);
+  }
+  to {
+    background-color: transparent;
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+.zona-cambiada {
+  animation: pulso-zona 900ms ease-out;
+  border-radius: 4px;
+}
+
+/* Quien pidió menos movimiento no recibe ninguno. */
+@media (prefers-reduced-motion: reduce) {
+  .zona-cambiada {
+    animation: none;
+  }
+}
+
+@media print {
+  .papel {
+    aspect-ratio: auto;
+    box-shadow: none;
+  }
+  .zona-cambiada {
+    animation: none;
+  }
 }

@@ -1,6 +1,13 @@
 import { EMPRESA, LEYENDA_NO_FISCAL } from '@/config/empresa';
 import { ROTULO, totalDe, type Documento } from '@/lib/dominio/documentos';
 import { $, dec, fechaDeDocumento } from '@/lib/formato';
+import { cn } from '@/lib/utils';
+
+/**
+ * Las partes del papel que pueden pulsar cuando se las edita al lado.
+ * Sólo se usa en el emisor; un documento ya emitido nunca cambia.
+ */
+export type ZonaHoja = 'lineas' | 'entrega' | 'total' | 'validez' | 'notas';
 
 /**
  * El papel. Lo que Jose le manda al cliente.
@@ -22,9 +29,17 @@ import { $, dec, fechaDeDocumento } from '@/lib/formato';
  *  3. No hay IVA, ni neto, ni discriminacion de impuestos. La
  *     plataforma no calcula nada fiscal.
  */
-export function HojaDocumento({ doc }: { doc: Documento }) {
+export function HojaDocumento({
+  doc,
+  resaltar = null,
+}: {
+  doc: Documento;
+  /** Qué parte acaba de cambiar. La hoja le da un pulso y se apaga sola. */
+  resaltar?: ZonaHoja | null;
+}) {
   const total = totalDe(doc);
   const conValores = total !== null;
+  const pulso = (z: ZonaHoja) => (resaltar === z ? 'zona-cambiada' : '');
 
   return (
     <article className="hoja bg-paper text-ink mx-auto max-w-3xl p-10 print:max-w-none print:p-0">
@@ -67,7 +82,7 @@ export function HojaDocumento({ doc }: { doc: Documento }) {
         {/* La obra va al lado del cliente y no al pie: es lo primero que
             mira el chofer cuando le dan el papel. */}
         {(doc.obra || doc.distanciaKm) && (
-          <div className="text-right">
+          <div className={cn('text-right', pulso('entrega'))}>
             <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
               Entrega
             </p>
@@ -94,7 +109,7 @@ export function HojaDocumento({ doc }: { doc: Documento }) {
             )}
           </tr>
         </thead>
-        <tbody>
+        <tbody className={pulso('lineas')}>
           {doc.lineas.map((l, i) => (
             <tr key={i} className="border-line border-b">
               <td className="py-2">{l.detalle}</td>
@@ -115,7 +130,7 @@ export function HojaDocumento({ doc }: { doc: Documento }) {
           ))}
         </tbody>
         {conValores && (
-          <tfoot>
+          <tfoot className={pulso('total')}>
             <tr>
               <td colSpan={3} className="py-3 text-right font-medium">
                 Total
@@ -129,13 +144,22 @@ export function HojaDocumento({ doc }: { doc: Documento }) {
       </table>
 
       {doc.validoHasta && (
-        <p className="text-warn-text border-warn/30 bg-warn-soft mt-4 rounded-md border px-3 py-2 text-sm">
+        <p
+          className={cn(
+            'text-warn-text border-warn/30 bg-warn-soft mt-4 rounded-md border px-3 py-2 text-sm',
+            pulso('validez'),
+          )}
+        >
           Este presupuesto vale hasta el {fechaDeDocumento(doc.validoHasta)}. Pasada esa
           fecha hay que pedir precio de nuevo.
         </p>
       )}
 
-      {doc.notas && <p className="text-ink-soft mt-4 text-sm whitespace-pre-line">{doc.notas}</p>}
+      {doc.notas && (
+        <p className={cn('text-ink-soft mt-4 text-sm whitespace-pre-line', pulso('notas'))}>
+          {doc.notas}
+        </p>
+      )}
 
       <footer className="border-line text-faint mt-10 flex flex-wrap justify-between gap-4 border-t pt-4 text-xs">
         <span>

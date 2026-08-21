@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 
-import { HojaDocumento } from '@/components/documentos/hoja';
+import { HojaDocumento, type ZonaHoja } from '@/components/documentos/hoja';
 import { Segmentado } from '@/components/dominio/segmentado';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,9 +21,32 @@ import {
   type TipoDocumento,
 } from '@/lib/dominio/documentos';
 import { $, num } from '@/lib/formato';
+import { cn } from '@/lib/utils';
 
 /** Cuántos días vale un presupuesto si nadie dice otra cosa. */
 const DIAS_VALIDEZ = 7;
+
+/**
+ * Le da un pulso a la parte del papel que se acaba de tocar.
+ *
+ * La pantalla promete "todo lo que cambies acá se ve en el papel al
+ * instante" y lo cumplía, pero en silencio: el ojo estaba en el
+ * formulario y el papel cambiaba sin avisar. Esto dice dónde mirar.
+ */
+function usePulso() {
+  const [zona, setZona] = useState<ZonaHoja | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const marcar = useCallback((z: ZonaHoja) => {
+    setZona(z);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setZona(null), 900);
+  }, []);
+
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  return [zona, marcar] as const;
+}
 
 function enDias(dias: number): string {
   const d = new Date();
@@ -81,6 +104,7 @@ export function EmisorDocumento({
   const [validez, setValidez] = useState(String(DIAS_VALIDEZ));
   const [notas, setNotas] = useState('');
   const [emitiendo, setEmitiendo] = useState(false);
+  const [pulso, marcarPulso] = usePulso();
 
   const tipo: TipoDocumento = esPresupuesto
     ? 'presupuesto'
@@ -120,6 +144,8 @@ export function EmisorDocumento({
 
   function cambiar(i: number, parche: Partial<LineaDocumento>) {
     setLineas((ls) => ls.map((l, j) => (j === i ? { ...l, ...parche } : l)));
+    // El precio mueve el total; el resto, el cuerpo de la tabla.
+    marcarPulso('precioUnitario' in parche ? 'total' : 'lineas');
   }
 
   function emitir() {
@@ -140,50 +166,74 @@ export function EmisorDocumento({
       </Link>
 
       {/* El papel primero en el orden del DOM: en el teléfono se ve lo
-          que se está armando antes que los controles que lo arman. */}
-      <div className="mt-4 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="border-line bg-paper shadow-tarjeta overflow-hidden rounded-xl border lg:sticky lg:top-6">
-          <HojaDocumento doc={borrador} />
+          que se está armando antes que los controles que lo arman.
+
+          Manda el papel, no el formulario: José está mirando lo que le va
+          a dar al cliente. Por eso la hoja tiene proporción y sombra de
+          hoja, apoyada sobre un fondo hundido, y los controles quedan en
+          una columna angosta al costado. */}
+      <div className="mt-4 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="bg-sunk rounded-2xl p-4 sm:p-7 lg:sticky lg:top-6 print:bg-transparent print:p-0">
+          <div className="papel bg-paper mx-auto max-w-2xl overflow-hidden rounded-sm print:max-w-none print:rounded-none">
+            <HojaDocumento doc={borrador} resaltar={pulso} />
+          </div>
         </div>
 
-        <aside className="grid content-start gap-5">
-          <div>
-            <h1 className="font-heading text-xl font-semibold tracking-tight">
-              {esPresupuesto ? 'Nuevo presupuesto' : 'Nuevo remito'}
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Va a salir con el número{' '}
-              <span className="font-mono tabular-nums">{borrador.numero}</span>. Todo lo que
-              cambies acá se ve en el papel al instante.
-            </p>
-          </div>
+        <aside className="grid content-start gap-4">
+          {/* El título grande lo lleva el papel. Acá alcanza con el número
+              que se va a usar. */}
+          <p className="text-faint text-xs">
+            Sale con el N°{' '}
+            <span className="text-ink-soft font-mono tabular-nums">{borrador.numero}</span>
+          </p>
 
+          {/* LA decisión de esta pantalla, y la única que no se puede
+              deshacer una vez impresa: si el papel lleva precios o no. Un
+              remito con precios en manos del chofer equivocado muestra el
+              precio preferencial de ese cliente. Por eso tiene su propia
+              tarjeta y no es un campo más de la lista. */}
           {!esPresupuesto && (
-            <div>
-              <Label className="mb-1.5 block">Qué imprime</Label>
+            <section
+              className={cn(
+                'rounded-xl border p-4 transition-colors',
+                conPrecios ? 'border-line bg-panel' : 'border-warn/40 bg-warn-soft',
+              )}
+            >
+              <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+                Qué imprime
+              </p>
               <Segmentado
+                className="mt-2"
                 valor={conPrecios ? 'con' : 'sin'}
-                onCambio={(v) => setConPrecios(v === 'con')}
+                onCambio={(v) => {
+                  setConPrecios(v === 'con');
+                  marcarPulso('total');
+                }}
                 opciones={[
                   { valor: 'con', etiqueta: 'Con precios' },
                   { valor: 'sin', etiqueta: 'Sin precios' },
                 ]}
               />
-              <p className="text-faint mt-1.5 text-xs">
+              <p
+                className={cn(
+                  'mt-2 text-xs',
+                  conPrecios ? 'text-muted-foreground' : 'text-warn-text',
+                )}
+              >
                 {conPrecios
-                  ? 'El que se le manda al cliente.'
-                  : 'El que va con el chofer: no lleva ni un peso impreso.'}
+                  ? 'Va con los importes. Es el que se le manda al cliente.'
+                  : 'No lleva ni un peso impreso, y suma el pie de firma. Es el que va con el chofer.'}
               </p>
-            </div>
+            </section>
           )}
 
-          <section className="border-line grid gap-3 border-t pt-4">
+          <section className="border-line bg-panel grid gap-3 rounded-xl border p-4">
             <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
               Detalle
             </p>
 
             {lineas.map((l, i) => (
-              <div key={i} className="border-line grid gap-2 rounded-lg border p-3">
+              <div key={i} className="border-line bg-sunk/60 grid gap-2 rounded-lg border p-3">
                 <Input
                   value={l.detalle}
                   onChange={(e) => cambiar(i, { detalle: e.target.value })}
@@ -269,7 +319,11 @@ export function EmisorDocumento({
             </Button>
           </section>
 
-          <section className="border-line grid gap-3 border-t pt-4">
+          {/* De las cinco ayudas que había, sobrevive una sola: la que
+              evita el error caro. Si la dirección de entrega está mal, el
+              camión va a otro lado. Las demás explicaban campos que ya se
+              explican solos por su nombre. */}
+          <section className="border-line bg-panel grid gap-3 rounded-xl border p-4">
             <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
               Entrega
             </p>
@@ -279,13 +333,15 @@ export function EmisorDocumento({
               <Input
                 id="obra"
                 value={obra}
-                onChange={(e) => setObra(e.target.value)}
+                onChange={(e) => {
+                  setObra(e.target.value);
+                  marcarPulso('entrega');
+                }}
                 placeholder="Ruta 41 km 12, lote 8"
                 className="mt-1.5"
               />
               <p className="text-faint mt-1 text-xs">
-                Casi nunca es la dirección fiscal del cliente. Es lo primero que mira el
-                chofer.
+                Casi nunca es la dirección fiscal. Es lo primero que mira el chofer.
               </p>
             </div>
 
@@ -295,64 +351,84 @@ export function EmisorDocumento({
                 <Input
                   id="km"
                   value={km}
-                  onChange={(e) => setKm(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'))}
+                  onChange={(e) => {
+                    setKm(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'));
+                    marcarPulso('entrega');
+                  }}
                   inputMode="decimal"
                   className="w-24 text-right font-mono tabular-nums"
                   placeholder="0"
                 />
                 <span className="text-ink-soft text-sm">km</span>
               </div>
-              <p className="text-faint mt-1 text-xs">
-                Se imprime también en el remito sin precios: al chofer le sirve saber el
-                viaje. No calcula el flete — ese va como una línea más.
-              </p>
             </div>
           </section>
 
           {esPresupuesto && (
-            <section className="border-line grid gap-2 border-t pt-4">
+            <section className="border-line bg-panel grid gap-2 rounded-xl border p-4">
               <Label htmlFor="validez">Vale por</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="validez"
                   value={validez}
-                  onChange={(e) => setValidez(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => {
+                    setValidez(e.target.value.replace(/\D/g, ''));
+                    marcarPulso('validez');
+                  }}
                   inputMode="numeric"
                   className="w-20 text-right font-mono tabular-nums"
                 />
                 <span className="text-ink-soft text-sm">días</span>
               </div>
               <p className="text-faint text-xs">
-                Va impreso. Con la inflación de hoy, un precio sin fecha de vencimiento es
-                una promesa que no se puede cumplir.
+                Va impreso: con esta inflación, un precio sin vencimiento no se puede
+                sostener.
               </p>
             </section>
           )}
 
-          <section className="border-line grid gap-1.5 border-t pt-4">
+          <section className="border-line bg-panel grid gap-1.5 rounded-xl border p-4">
             <Label htmlFor="notas">Notas (opcional)</Label>
             <Input
               id="notas"
               value={notas}
-              onChange={(e) => setNotas(e.target.value)}
+              onChange={(e) => {
+                setNotas(e.target.value);
+                marcarPulso('notas');
+              }}
               placeholder="Forma de pago, horario, lo que haga falta"
             />
           </section>
 
-          <div className="border-line bg-panel sticky bottom-0 -mx-1 border-t px-1 pt-4 pb-1">
-            {conValores && total !== null && (
-              <div className="mb-3 flex items-baseline justify-between">
-                <span className="text-muted-foreground text-sm">Total</span>
-                <span className="font-mono text-lg font-semibold tabular-nums">{$(total)}</span>
-              </div>
-            )}
-            <Button className="w-full" onClick={emitir} disabled={!valido || emitiendo}>
-              {emitiendo ? 'Emitiendo…' : 'Emitir y ver para imprimir'}
-            </Button>
-            <p className="text-faint mt-2 text-xs">
-              Al emitir queda guardado con su número. Hasta entonces esto es un borrador y
-              no ocupa ningún número.
-            </p>
+          {/* La barra de emitir. El total va acá y grande porque es donde
+              se decide; en el papel vive como parte del documento, que es
+              su lugar natural. Antes competían y no ganaba ninguno.
+
+              El sticky lleva su propio fondo y un poco de aire abajo: sin
+              eso tapaba el último campo del panel. */}
+          <div className="sticky bottom-0 -mx-4 -mb-4">
+            <div className="to-background pointer-events-none h-8 bg-gradient-to-b from-transparent" />
+            <div className="bg-background px-4 pb-4">
+              {conValores && total !== null && (
+                <div className="mb-3 flex items-baseline justify-between gap-3">
+                  <span className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+                    Total
+                  </span>
+                  <span className="font-mono text-2xl font-semibold tabular-nums">{$(total)}</span>
+                </div>
+              )}
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={emitir}
+                disabled={!valido || emitiendo}
+              >
+                {emitiendo ? 'Emitiendo…' : 'Emitir y ver para imprimir'}
+              </Button>
+              <p className="text-faint mt-2 text-xs">
+                Hasta que lo emitas es un borrador y no ocupa ningún número.
+              </p>
+            </div>
           </div>
         </aside>
       </div>
