@@ -94,7 +94,7 @@ export const CLIENTES: Cliente[] = [
   },
 ];
 
-const RECETAS: Record<string, { m3PorCarga: number; precio: number; cemento: number; arena: number; piedra: number }> = {
+export const RECETAS: Record<string, { m3PorCarga: number; precio: number; cemento: number; arena: number; piedra: number }> = {
   'H-21': { m3PorCarga: 7, precio: 89000, cemento: 320, arena: 780, piedra: 1050 },
   'H-25': { m3PorCarga: 6, precio: 94000, cemento: 340, arena: 760, piedra: 1040 },
   'H-30': { m3PorCarga: 6, precio: 99000, cemento: 380, arena: 730, piedra: 1020 },
@@ -229,3 +229,17 @@ export const MATERIALES: Material[] = [
     proveedor: { nombre: 'Canteras Monte', telefono: '+54 9 2271 45-9010' },
   },
 ];
+
+/**
+ * Lo que costaria hoy una carga de esta receta, para PROPONER un precio
+ * al asignarle el cliente.
+ *
+ * Es una sugerencia, no el precio de la venta. El numero que queda
+ * guardado es el que Jose confirma en ese momento y no se recalcula
+ * nunca mas: con esta inflacion, un historico que se mueve hace mentir a
+ * la rentabilidad entera. Ver decisiones/hormigonera-precio-en-la-venta.
+ */
+export function precioSugerido(receta: string, m3: number): number {
+  const r = RECETAS[receta];
+  return r ? Math.round(r.precio * m3) : 0;
+}

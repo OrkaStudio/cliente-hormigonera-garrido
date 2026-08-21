@@ -19,9 +19,20 @@ import { cn } from '@/lib/utils';
  * Cuando existan esos apartados, el desplegable sigue sirviendo: es el
  * resumen, y el botón pasa a llevar además a la pantalla completa.
  */
-export function AlertaResoluble({ alerta }: { alerta: Alerta }) {
+export function AlertaResoluble({
+  alerta,
+  children,
+}: {
+  alerta: Alerta;
+  /**
+   * Reemplaza la lista de filas cuando el detalle no es informativo sino
+   * accionable — hoy, la asignacion de cliente. La lista generica sigue
+   * sirviendo para las alertas que solo muestran.
+   */
+  children?: React.ReactNode;
+}) {
   const [abierta, setAbierta] = useState(false);
-  const tieneDetalle = Boolean(alerta.filas?.length);
+  const tieneDetalle = Boolean(children) || Boolean(alerta.filas?.length);
 
   return (
     <div>
@@ -64,21 +75,23 @@ export function AlertaResoluble({ alerta }: { alerta: Alerta }) {
             </p>
           )}
 
-          <ul className="divide-line/70 divide-y">
-            {alerta.filas!.map((f) => (
-              <li key={f.clave} className="flex items-baseline justify-between gap-4 py-1.5">
-                <span className="text-ink-soft text-sm">{f.etiqueta}</span>
-                <span
-                  className={cn(
-                    'font-mono text-sm tabular-nums',
-                    f.tono ? textoPorTono[f.tono] : 'text-ink'
-                  )}
-                >
-                  {f.valor}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {children ?? (
+            <ul className="divide-line/70 divide-y">
+              {alerta.filas!.map((f) => (
+                <li key={f.clave} className="flex items-baseline justify-between gap-4 py-1.5">
+                  <span className="text-ink-soft text-sm">{f.etiqueta}</span>
+                  <span
+                    className={cn(
+                      'font-mono text-sm tabular-nums',
+                      f.tono ? textoPorTono[f.tono] : 'text-ink'
+                    )}
+                  >
+                    {f.valor}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {alerta.pieDetalle && (
             <p className="text-muted-foreground mt-2.5 text-xs">{alerta.pieDetalle}</p>
