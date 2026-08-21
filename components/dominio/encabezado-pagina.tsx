@@ -19,7 +19,9 @@ export function EncabezadoPagina({
   return (
     <header className={cn('flex flex-wrap items-end justify-between gap-4', className)}>
       <div>
-        <h1 className="text-2xl font-semibold text-ink">{titulo}</h1>
+        <h1 className="font-heading text-ink text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
+          {titulo}
+        </h1>
         {bajada ? <div className="text-faint mt-1 text-sm">{bajada}</div> : null}
       </div>
       {acciones ? <div className="flex items-center gap-2">{acciones}</div> : null}

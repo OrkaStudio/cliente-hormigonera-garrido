@@ -1,17 +1,14 @@
 'use client';
-
 import type { Route } from 'next';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, FileText, Pencil, Receipt, UserCheck, UserMinus } from 'lucide-react';
-
-import { cn } from '@/lib/utils';
-
 import { Cifra } from '@/components/dominio/cifra';
 import { EncabezadoPagina } from '@/components/dominio/encabezado-pagina';
 import { Estado, MarcaFiscalDeVenta } from '@/components/dominio/estado';
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import { DocumentosDelCliente } from '@/components/clientes/documentos-del-cliente';
+import { FichaContacto } from '@/components/clientes/ficha-contacto';
 import { TarjetaKpi } from '@/components/dominio/tarjeta-kpi';
 import { Button } from '@/components/ui/button';
 import { buscarLocal, editarLocal, parcheLocal } from '@/lib/datos/locales';
@@ -20,7 +17,6 @@ import { porcentajeEnBlanco } from '@/lib/dominio/clientes';
 import { $, dec, fechaDeMomento, fechaLargaDeMomento, hora, num } from '@/lib/formato';
 import { DialogoBaja } from './dialogo-baja';
 import { DialogoCliente, type DatosCliente } from './dialogo-cliente';
-
 /**
  * El perfil de un cliente.
  *
@@ -41,7 +37,6 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
   const [montado, setMontado] = useState(false);
   const [editando, setEditando] = useState(false);
   const [dandoBaja, setDandoBaja] = useState(false);
-
   function refrescar() {
     if (perfil) {
       setDatos({ ...perfil, ...parcheLocal(id) });
@@ -51,13 +46,11 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
     const local = buscarLocal(id);
     setDatos(local ? { ...local, ventas: [] } : null);
   }
-
   useEffect(() => {
     setMontado(true);
     refrescar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perfil, id]);
-
   if (!datos) {
     return (
       <main className="mx-auto max-w-6xl px-4 pt-5 pb-16 sm:px-6">
@@ -81,46 +74,36 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
       </main>
     );
   }
-
   const { resumen } = datos;
   const blanco = porcentajeEnBlanco(resumen);
   const definidas = resumen.definidas;
-
   function guardar(nuevos: DatosCliente) {
     editarLocal(id, nuevos);
     setEditando(false);
     refrescar();
   }
-
   function alternarActivo() {
     editarLocal(id, { activo: !datos!.activo });
     setDandoBaja(false);
     refrescar();
   }
-
   return (
     <main className="mx-auto max-w-6xl px-4 pt-5 pb-16 sm:px-6">
       <Volver />
-
       <EncabezadoPagina
         className="mt-3"
         titulo={datos.nombre}
         bajada={
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            {!datos.activo && <Estado>Inactivo</Estado>}
+          /* El contacto y el teléfono se fueron a la ficha del costado:
+             estaban acá Y allá, y repetidos no ganan presencia, la
+             pierden. Acá queda sólo lo que califica al cliente. */
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            {!datos.activo && <Estado tono="warn">Inactivo</Estado>}
             {datos.generico && <Estado>Venta suelta</Estado>}
-            {datos.contacto && <span>{datos.contacto}</span>}
-            {datos.telefono && <span className="tabular-nums">{datos.telefono}</span>}
-            {datos.generico ? (
-              <span>
-                El comprador esporádico que no justifica darle de alta un perfil. No se
-                edita ni se desactiva: si se apaga, las ventas sueltas se quedan sin dónde
-                caer.
+            {datos.generico && (
+              <span className="text-muted-foreground text-sm">
+                El comprador esporádico que no justifica darle de alta un perfil.
               </span>
-            ) : (
-              !datos.contacto &&
-              !datos.telefono &&
-              datos.activo && <span>Sin datos de contacto cargados.</span>
             )}
           </span>
         }
@@ -132,7 +115,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
               render={<Link href={`/clientes/${id}/emitir?tipo=presupuesto` as Route} />}
             >
               <FileText data-icon="inline-start" />
-              Presupuesto
+              Hacer presupuesto
             </Button>
             {datos.generico ? null : (
               <>
@@ -158,7 +141,6 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
           </>
         }
       />
-
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <TarjetaKpi
           rotulo="Comprados"
@@ -185,13 +167,11 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
           pie="Suma de las cargas que tiene asignadas"
         />
       </div>
-
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_20rem]">
         <section className="min-w-0">
           <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
             Sus cargas
           </h2>
-
           {datos.ventas.length === 0 ? (
             <EstadoVacio
               className="mt-3"
@@ -237,35 +217,26 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
               ))}
             </ul>
           )}
-
           <div className="mt-6">
             <DocumentosDelCliente clienteId={id} />
           </div>
         </section>
-
         <aside className="grid min-w-0 content-start gap-4">
-          <div className="border-line bg-card shadow-tarjeta rounded-lg border p-4">
-            <h3 className="rotulo-obra text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
-              Datos
-            </h3>
-            <dl className="mt-3 grid gap-2 text-sm">
-              <Dato rotulo="Dirección" valor={datos.direccion} />
-              <Dato rotulo="CUIT" valor={datos.cuit} mono />
-              <Dato rotulo="Mail" valor={datos.mail} />
-              <Dato rotulo="Teléfono" valor={datos.telefono} mono />
-            </dl>
-            {datos.notas && (
-              <p className="text-faint border-line mt-3 border-t pt-3 text-sm">
-                {datos.notas}
-              </p>
-            )}
-          </div>
-
+          <FichaContacto
+            contacto={datos.contacto}
+            telefono={datos.telefono}
+            mail={datos.mail}
+            cuit={datos.cuit}
+            direccion={datos.direccion}
+            notas={datos.notas}
+            generico={datos.generico}
+            onEditar={() => setEditando(true)}
+          />
           {/* Blanco / negro. Es un dato sensible: la sospecha de la spec es
               que el operador de planta no tiene que verlo. Los permisos se
               definen con José, así que por ahora se muestra sin gatear. */}
           <div className="border-line bg-card shadow-tarjeta rounded-lg border p-4">
-            <h3 className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
+            <h3 className="rotulo-obra text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
               Blanco y negro
             </h3>
             {blanco === null ? (
@@ -288,7 +259,6 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
           </div>
         </aside>
       </div>
-
       <DialogoCliente
         abierto={editando}
         cliente={datos}
@@ -303,12 +273,10 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
     </main>
   );
 }
-
 /** La barra son pesos, no cantidad de ventas. Ver ResumenCliente. */
 function ProporcionFiscal({ blanco, negro }: { blanco: number; negro: number }) {
   const total = blanco + negro;
   if (!total) return null;
-
   return (
     <div
       className="border-line mt-2 flex h-2.5 overflow-hidden rounded-full border"
@@ -320,7 +288,6 @@ function ProporcionFiscal({ blanco, negro }: { blanco: number; negro: number }) 
     </div>
   );
 }
-
 function Volver() {
   return (
     <Link
@@ -330,29 +297,5 @@ function Volver() {
       <ArrowLeft className="size-3.5" />
       Clientes
     </Link>
-  );
-}
-
-function Dato({
-  rotulo,
-  valor,
-  mono = false,
-}: {
-  rotulo: string;
-  valor: string | null;
-  mono?: boolean;
-}) {
-  return (
-    <div className="grid grid-cols-[6rem_1fr] items-baseline gap-2">
-      <dt className="text-faint text-xs">{rotulo}</dt>
-      <dd
-        className={cn(
-          'min-w-0 [overflow-wrap:anywhere]',
-          valor ? (mono ? 'font-mono text-sm tabular-nums' : '') : 'text-faint',
-        )}
-      >
-        {valor ?? 'Sin cargar'}
-      </dd>
-    </div>
   );
 }

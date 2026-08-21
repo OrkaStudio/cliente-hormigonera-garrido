@@ -98,14 +98,15 @@ export function VistaDocumento({ numero }: { numero: string }) {
             {doc.clienteNombre}
           </Link>
 
-          {/* Los dos pasos en el orden en que se hacen: primero se guarda
-              el PDF, después se manda. Al revés no sirve — WhatsApp abre
-              con el mensaje escrito pero el archivo hay que adjuntarlo a
-              mano, y si todavía no existe, José tiene que volver. */}
+          {/* En el orden en que se hacen: primero se guarda el PDF,
+              después se manda. Al revés no sirve — WhatsApp abre con el
+              mensaje escrito pero el archivo hay que adjuntarlo a mano, y
+              si todavía no existe, José tiene que volver. El orden y el
+              peso de cada botón alcanzan para decirlo; los numeritos
+              sobraban. */}
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={() => window.print()}>
               <Printer data-icon="inline-start" />
-              <span className="text-faint mr-1 font-mono text-xs">1</span>
               Guardar PDF
             </Button>
 
@@ -116,7 +117,6 @@ export function VistaDocumento({ numero }: { numero: string }) {
                 title={`Abre WhatsApp con el mensaje ya escrito para ${wsp.nombre}`}
               >
                 <Send data-icon="inline-start" />
-                <span className="text-primary-foreground/50 mr-1 font-mono text-xs">2</span>
                 Mandar a {wsp.nombre}
               </Button>
             )}
