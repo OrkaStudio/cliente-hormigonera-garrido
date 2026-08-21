@@ -59,7 +59,7 @@ export function AlertaResoluble({ alerta }: { alerta: Alerta }) {
           className="border-line bg-panel rounded-b-lg border border-t-0 px-5 py-3.5"
         >
           {alerta.tituloDetalle && (
-            <p className="text-muted-foreground mb-2 font-mono text-[0.68rem] tracking-widest uppercase">
+            <p className="text-muted-foreground mb-2 font-mono text-xs tracking-widest uppercase">
               {alerta.tituloDetalle}
             </p>
           )}
