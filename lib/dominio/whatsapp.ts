@@ -4,15 +4,24 @@ import { $, dec } from '@/lib/formato';
 /**
  * Mandar el documento por WhatsApp.
  *
- * ⚠️ Lo que NO se puede, y conviene tener escrito para que nadie lo
- * vuelva a prometer: **desde el navegador no se adjunta un PDF**. El
- * enlace `wa.me` sólo acepta el parámetro `text`; no existe uno para
- * archivos. Adjuntar de verdad requiere la WhatsApp Business Platform de
- * Meta — cuenta verificada, plantillas aprobadas y costo por
- * conversación — más un backend que genere y hostee el PDF.
+ * ⚠️ Dos límites, escritos para que nadie los vuelva a prometer:
  *
- * Así que va el mensaje armado y el enlace al documento. El cliente lo
- * abre y ahí tiene el papel para ver, imprimir o guardar como PDF.
+ * 1. **Desde el navegador no se adjunta un PDF.** El enlace `wa.me` sólo
+ *    acepta el parámetro `text`; no existe uno para archivos. Adjuntar de
+ *    verdad requiere la WhatsApp Business Platform de Meta — cuenta
+ *    verificada, plantillas aprobadas, costo por conversación — más un
+ *    backend que genere y hostee el PDF.
+ *
+ * 2. **Tampoco va un enlace al documento.** Es tentador y estuvo puesto
+ *    un rato, pero no funciona por dos razones distintas: hoy los papeles
+ *    viven en el `localStorage` del navegador que los emitió, así que el
+ *    cliente abriría una pantalla que dice "no encontramos ese
+ *    documento"; y cuando la plataforma tenga login va a quedar detrás de
+ *    la puerta, que es justo lo que uno quiere para los precios de los
+ *    demás clientes.
+ *
+ * Así que el mensaje va solo, listo para que José adjunte el PDF a mano
+ * — que es un toque más en el teléfono y funciona siempre.
  */
 
 /**
@@ -66,7 +75,7 @@ function saludo(nombre: string | null | undefined): string {
   return `Hola ${limpio.split(/\s+/)[0]}`;
 }
 
-export function mensajeDeDocumento(doc: Documento, url: string, contacto?: string | null) {
+export function mensajeDeDocumento(doc: Documento, contacto?: string | null) {
   const total = totalDe(doc);
   const linea = doc.lineas[0];
 
@@ -81,7 +90,6 @@ export function mensajeDeDocumento(doc: Documento, url: string, contacto?: strin
     '.',
     total !== null ? ` Total ${$(total)}.` : '',
     doc.validoHasta ? ' El precio vale por los días indicados en el papel.' : '',
-    `\n\n${url}`,
     '\n\nCualquier cosa me escribís. Gracias!',
   ];
 

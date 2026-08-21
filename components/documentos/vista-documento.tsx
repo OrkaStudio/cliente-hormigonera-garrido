@@ -51,9 +51,8 @@ export function VistaDocumento({ numero }: { numero: string }) {
         if (!vigente || !perfil) return;
         const tel = telefonoParaWhatsapp(perfil.telefono);
         if (!tel) return;
-        const url = window.location.href;
         setWsp({
-          href: enlaceWhatsapp(tel, mensajeDeDocumento(doc, url, perfil.contacto)),
+          href: enlaceWhatsapp(tel, mensajeDeDocumento(doc, perfil.contacto)),
           nombre: perfil.contacto?.split(/\s+/)[0] ?? perfil.nombre,
         });
       })
@@ -99,29 +98,43 @@ export function VistaDocumento({ numero }: { numero: string }) {
             {doc.clienteNombre}
           </Link>
 
-          <div className="flex items-center gap-2">
+          {/* Los dos pasos en el orden en que se hacen: primero se guarda
+              el PDF, después se manda. Al revés no sirve — WhatsApp abre
+              con el mensaje escrito pero el archivo hay que adjuntarlo a
+              mano, y si todavía no existe, José tiene que volver. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer data-icon="inline-start" />
+              <span className="text-faint mr-1 font-mono text-xs">1</span>
+              Guardar PDF
+            </Button>
+
             {wsp && (
               <Button
                 nativeButton={false}
-                variant="outline"
-                render={
-                  <a href={wsp.href} target="_blank" rel="noopener noreferrer" />
-                }
-                title={`Abre WhatsApp con el mensaje escrito para ${wsp.nombre}`}
+                render={<a href={wsp.href} target="_blank" rel="noopener noreferrer" />}
+                title={`Abre WhatsApp con el mensaje ya escrito para ${wsp.nombre}`}
               >
                 <Send data-icon="inline-start" />
-                Mandar por WhatsApp
+                <span className="text-primary-foreground/50 mr-1 font-mono text-xs">2</span>
+                Mandar a {wsp.nombre}
               </Button>
             )}
-            <Button onClick={() => window.print()}>
-              <Printer data-icon="inline-start" />
-              Imprimir o guardar PDF
-            </Button>
           </div>
         </div>
       </div>
 
-      <main className="py-8 print:py-0">
+      {wsp && (
+        <p
+          data-imprimir="no"
+          className="text-muted-foreground mx-auto max-w-3xl px-4 pt-3 text-xs"
+        >
+          WhatsApp abre con el mensaje escrito. El PDF se adjunta a mano desde el clip —
+          desde el navegador no se puede adjuntar solo.
+        </p>
+      )}
+
+      <main className="py-6 print:py-0">
         <div className="border-line bg-paper shadow-tarjeta mx-auto max-w-3xl rounded-xl border print:rounded-none print:border-0 print:shadow-none">
           <HojaDocumento doc={doc} />
         </div>
