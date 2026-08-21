@@ -141,6 +141,26 @@ export function generarCargas(ahora: Date): Carga[] {
       const cliente = sinCliente ? null : compradores[Math.floor(rnd() * compradores.length)]!;
       const clienteId = cliente?.id ?? null;
 
+      const total = sinCliente ? 0 : Math.round(r.m3PorCarga * r.precio);
+
+      // Como se reparte el corte fiscal en la maqueta. La mitad va
+      // entera en blanco, un cuarto entero en negro, y un cuarto sale
+      // partido — que es el caso que existe de verdad en la planta y
+      // que la app no sabia representar hasta ahora.
+      const dado = rnd();
+      const montoFacturado = sinCliente
+        ? null
+        : dado < 0.5
+          ? total
+          : dado < 0.75
+            ? 0
+            : // Un corte "redondo", como se factura a mano: multiplo de
+              // diez mil, nunca 0 ni el total (eso ya son los otros casos).
+              Math.min(
+                total - 10_000,
+                Math.max(10_000, Math.round((total * (0.3 + rnd() * 0.5)) / 10_000) * 10_000),
+              );
+
       cargas.push({
         id: `C-${1000 + cargas.length}`,
         momento: momento.toISOString(),
@@ -148,8 +168,8 @@ export function generarCargas(ahora: Date): Carga[] {
         m3: r.m3PorCarga,
         clienteId,
         estado: sinCliente ? 'registrada' : dia === 0 ? 'asignada' : 'facturada',
-        fiscal: sinCliente ? null : rnd() > 0.35 ? 'blanco' : 'negro',
-        total: sinCliente ? 0 : Math.round(r.m3PorCarga * r.precio),
+        montoFacturado,
+        total,
         pesadas: [
           {
             material: 'Cemento',

@@ -5,7 +5,7 @@ import { BarraSuperior } from '@/components/app/barra-superior';
 import { FiltroRango } from '@/components/app/filtro-rango';
 import { Alerta } from '@/components/dominio/alerta';
 import { BarraDesvio } from '@/components/dominio/barra-desvio';
-import { Estado, MarcaFiscal } from '@/components/dominio/estado';
+import { Estado, MarcaFiscalDeVenta } from '@/components/dominio/estado';
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import { SemaforoStock } from '@/components/dominio/semaforo-stock';
 import { TarjetaKpi } from '@/components/dominio/tarjeta-kpi';
@@ -218,8 +218,8 @@ export default async function Inicio({
                             {c.total ? $(c.total) : <span className="text-faint">—</span>}
                           </TableCell>
                           <TableCell>
-                            {c.fiscal ? (
-                              <MarcaFiscal tipo={c.fiscal} />
+                            {c.clienteId ? (
+                              <MarcaFiscalDeVenta venta={c} />
                             ) : (
                               <Estado tono="warn">Sin cliente</Estado>
                             )}
