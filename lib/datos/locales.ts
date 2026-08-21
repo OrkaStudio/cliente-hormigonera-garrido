@@ -1,6 +1,6 @@
 'use client';
 
-import type { ClienteConResumen } from '@/lib/dominio/clientes';
+import type { ClienteConResumen, ResumenCliente } from '@/lib/dominio/clientes';
 import type { Cliente } from './tipos';
 
 /**
@@ -78,7 +78,7 @@ export function editarLocal(id: string, parche: Partial<Cliente>) {
   });
 }
 
-const RESUMEN_VACIO = {
+const RESUMEN_VACIO: ResumenCliente = {
   ventas: 0,
   m3: 0,
   facturado: 0,
@@ -86,6 +86,7 @@ const RESUMEN_VACIO = {
   recetaFrecuente: null,
   blanco: 0,
   negro: 0,
+  definidas: 0,
 };
 
 /**

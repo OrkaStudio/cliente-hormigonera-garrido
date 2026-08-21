@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 import { Cifra } from '@/components/dominio/cifra';
 import { EncabezadoPagina } from '@/components/dominio/encabezado-pagina';
-import { Estado, MarcaFiscal } from '@/components/dominio/estado';
+import { Estado, MarcaFiscalDeVenta } from '@/components/dominio/estado';
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import { TarjetaKpi } from '@/components/dominio/tarjeta-kpi';
 import { Button } from '@/components/ui/button';
@@ -82,7 +82,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
 
   const { resumen } = datos;
   const blanco = porcentajeEnBlanco(resumen);
-  const marcadas = resumen.blanco + resumen.negro;
+  const definidas = resumen.definidas;
 
   function guardar(nuevos: DatosCliente) {
     editarLocal(id, nuevos);
@@ -191,7 +191,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
                     {v.total ? $(v.total) : <span className="text-faint">—</span>}
                   </span>
                   <span className="w-16 text-right">
-                    {v.fiscal && <MarcaFiscal tipo={v.fiscal} />}
+                    <MarcaFiscalDeVenta venta={v} />
                   </span>
                 </li>
               ))}
@@ -226,7 +226,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
             </h3>
             {blanco === null ? (
               <p className="text-faint mt-2 text-sm">
-                Ninguna de sus ventas está marcada todavía.
+                Ninguna de sus ventas tiene el corte definido todavía.
               </p>
             ) : (
               <>
@@ -236,8 +236,8 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
                 </p>
                 <ProporcionFiscal blanco={resumen.blanco} negro={resumen.negro} />
                 <p className="text-faint mt-2 text-xs">
-                  {resumen.blanco} en blanco y {resumen.negro} en negro, sobre{' '}
-                  {marcadas} {marcadas === 1 ? 'venta marcada' : 'ventas marcadas'}.
+                  {$(resumen.blanco)} en blanco y {$(resumen.negro)} en negro, sobre{' '}
+                  {definidas} {definidas === 1 ? 'venta' : 'ventas'} con el corte definido.
                 </p>
               </>
             )}
@@ -260,6 +260,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
   );
 }
 
+/** La barra son pesos, no cantidad de ventas. Ver ResumenCliente. */
 function ProporcionFiscal({ blanco, negro }: { blanco: number; negro: number }) {
   const total = blanco + negro;
   if (!total) return null;
@@ -268,7 +269,7 @@ function ProporcionFiscal({ blanco, negro }: { blanco: number; negro: number }) 
     <div
       className="border-line mt-2 flex h-2.5 overflow-hidden rounded-full border"
       role="img"
-      aria-label={`${blanco} de ${total} ventas en blanco`}
+      aria-label={`${$(blanco)} de ${$(total)} en blanco`}
     >
       <div className="bg-white" style={{ width: `${(blanco / total) * 100}%` }} />
       <div className="bg-ink" style={{ width: `${(negro / total) * 100}%` }} />

@@ -73,6 +73,8 @@ export const Fiscal: Story = {
     <div className="flex flex-wrap items-center gap-2">
       <MarcaFiscal tipo="blanco" />
       <MarcaFiscal tipo="negro" />
+      <MarcaFiscal tipo="parcial" porcentaje={62} detalle="Facturado $ 350.000 de $ 564.000" />
+      <MarcaFiscal tipo="parcial" porcentaje={8} detalle="Facturado $ 45.000 de $ 564.000" />
     </div>
   ),
   parameters: {
@@ -81,7 +83,10 @@ export const Fiscal: Story = {
         story:
           'Deliberadamente **sin color de estado**: que una venta sea en negro no es un error ' +
           'ni una alarma. La plataforma marca de qué lado cae cada venta y las muestra ' +
-          'separadas; nada fiscal se calcula acá.',
+          'separadas; nada fiscal se calcula acá.\n\n' +
+          '`parcial` no es un tercer estado inventado: es lo que pasa cuando se factura una ' +
+          'parte de la venta y el resto no. Muestra el porcentaje porque "Parcial" a secas no ' +
+          'distingue el 5% del 95%; el monto exacto va en el tooltip.',
       },
     },
   },

@@ -9,7 +9,15 @@
  */
 
 export type EstadoCarga = 'registrada' | 'asignada' | 'facturada' | 'anulada';
-export type Fiscal = 'blanco' | 'negro';
+
+/**
+ * De que lado cae una venta. `parcial` existe porque en la practica se
+ * factura una parte y el resto no: un booleano no puede representar
+ * "de $564.000 se facturaron $350.000".
+ *
+ * No se guarda. Se deriva del monto con `condicionFiscal()`.
+ */
+export type Fiscal = 'blanco' | 'negro' | 'parcial';
 
 export interface PesadaMaterial {
   material: string;
@@ -30,7 +38,20 @@ export interface Carga {
   /** Null mientras la carga está pendiente de asignación. */
   clienteId: string | null;
   estado: EstadoCarga;
-  fiscal: Fiscal | null;
+  /**
+   * Cuanto de esta venta se facturo, EN PESOS.
+   *
+   * Se guarda el monto y no el porcentaje a proposito. El porcentaje se
+   * recalcula solo si el total cambia, y con esta inflacion un historico
+   * que se mueve hace mentir a la rentabilidad entera — la misma razon
+   * por la que el precio se congela en la venta.
+   *
+   *   null            todavia no se definio
+   *   0               nada facturado (negro)
+   *   igual a `total` todo facturado (blanco)
+   *   en el medio     parcial
+   */
+  montoFacturado: number | null;
   total: number;
   pesadas: PesadaMaterial[];
   /** Valores fuera de rango razonable: se marca, no se rechaza. */

@@ -17,7 +17,7 @@ function carga(p: Partial<Carga>): Carga {
     m3: 7,
     clienteId: 'CL-01',
     estado: 'asignada',
-    fiscal: 'blanco',
+    montoFacturado: 100_000,
     total: 100_000,
     pesadas: [],
     ...p,
@@ -109,35 +109,58 @@ describe('resumenDeCliente', () => {
       recetaFrecuente: null,
       blanco: 0,
       negro: 0,
+      definidas: 0,
     });
   });
 });
 
 describe('porcentajeEnBlanco', () => {
-  it('calcula sobre las marcadas', () => {
+  it('calcula sobre los pesos de las ventas definidas', () => {
     const r = resumenDeCliente('CL-01', [
-      carga({ id: 'a', fiscal: 'blanco' }),
-      carga({ id: 'b', fiscal: 'blanco' }),
-      carga({ id: 'c', fiscal: 'negro' }),
+      carga({ id: 'a', montoFacturado: 100_000 }),
+      carga({ id: 'b', montoFacturado: 100_000 }),
+      carga({ id: 'c', montoFacturado: 0 }),
     ]);
 
     expect(porcentajeEnBlanco(r)).toBe(67);
   });
 
+  // El motivo de medir en pesos y no en cantidad: contando ventas esto
+  // daria 50%, cuando en plata el blanco es apenas el 8%.
+  it('una venta grande en negro pesa mas que una chica en blanco', () => {
+    const r = resumenDeCliente('CL-01', [
+      carga({ id: 'a', total: 100_000, montoFacturado: 100_000 }),
+      carga({ id: 'b', total: 1_100_000, montoFacturado: 0 }),
+    ]);
+
+    expect(porcentajeEnBlanco(r)).toBe(8);
+  });
+
+  it('la parte facturada de una venta parcial cae de los dos lados', () => {
+    const r = resumenDeCliente('CL-01', [
+      carga({ id: 'a', total: 100_000, montoFacturado: 40_000 }),
+    ]);
+
+    expect(r.blanco).toBe(40_000);
+    expect(r.negro).toBe(60_000);
+    expect(porcentajeEnBlanco(r)).toBe(40);
+  });
+
   // Sin esto, "todavía no se definió" se leería como "le vende todo en
   // negro", que es afirmar algo que nadie dijo.
-  it('devuelve null cuando no hay ninguna marcada, no 0', () => {
-    const r = resumenDeCliente('CL-01', [carga({ fiscal: null })]);
+  it('devuelve null cuando no hay ninguna definida, no 0', () => {
+    const r = resumenDeCliente('CL-01', [carga({ montoFacturado: null })]);
     expect(porcentajeEnBlanco(r)).toBeNull();
   });
 
-  it('no cuenta las sin marcar en el denominador', () => {
+  it('no cuenta las sin definir en el denominador', () => {
     const r = resumenDeCliente('CL-01', [
-      carga({ id: 'a', fiscal: 'blanco' }),
-      carga({ id: 'b', fiscal: null }),
+      carga({ id: 'a', montoFacturado: 100_000 }),
+      carga({ id: 'b', montoFacturado: null }),
     ]);
 
     expect(porcentajeEnBlanco(r)).toBe(100);
+    expect(r.definidas).toBe(1);
   });
 });
 
@@ -152,6 +175,7 @@ describe('ordenarPorActividad', () => {
       recetaFrecuente: null,
       blanco: 0,
       negro: 0,
+      definidas: 0,
     },
   });
 

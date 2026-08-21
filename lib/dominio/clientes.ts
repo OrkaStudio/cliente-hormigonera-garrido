@@ -1,4 +1,5 @@
 import type { Carga, Cliente } from '@/lib/datos/tipos';
+import { pesosDe } from './fiscal';
 
 /**
  * Lo que se sabe de un cliente mirando sus cargas.
@@ -14,8 +15,18 @@ export interface ResumenCliente {
   ultimaCompra: string | null;
   /** La receta que más veces compró. Null si todavía no compró nada. */
   recetaFrecuente: string | null;
+  /**
+   * Blanco y negro se miden EN PESOS, no en cantidad de ventas.
+   *
+   * Contar ventas hacía que una de $6.000.000 pesara lo mismo que una
+   * de $500.000, y con facturación parcial deja de tener sentido: una
+   * misma venta cae de los dos lados a la vez. R5 del apartado 3 pide
+   * los dos totales separados, y separados quiere decir en plata.
+   */
   blanco: number;
   negro: number;
+  /** Cuántas ventas ya tienen el corte definido. Para el texto al pie. */
+  definidas: number;
 }
 
 /**
@@ -44,29 +55,34 @@ export function resumenDeCliente(clienteId: string, cargas: Carga[]): ResumenCli
 
   const momentos = ventas.map((v) => v.momento).sort();
 
+  // Las que no tienen el corte definido quedan afuera de los dos lados.
+  const cortes = ventas.map(pesosDe).filter((p) => p !== null);
+
   return {
     ventas: ventas.length,
     m3: ventas.reduce((a, v) => a + v.m3, 0),
     facturado: ventas.reduce((a, v) => a + v.total, 0),
     ultimaCompra: momentos.at(-1) ?? null,
     recetaFrecuente,
-    blanco: ventas.filter((v) => v.fiscal === 'blanco').length,
-    negro: ventas.filter((v) => v.fiscal === 'negro').length,
+    blanco: cortes.reduce((a, p) => a + p.blanco, 0),
+    negro: cortes.reduce((a, p) => a + p.negro, 0),
+    definidas: cortes.length,
   };
 }
 
 /**
- * El porcentaje en blanco sobre lo que tiene marca fiscal.
+ * Qué porcentaje de la plata va en blanco, sobre lo que tiene el corte
+ * definido.
  *
- * El denominador excluye las ventas sin marcar a propósito: si una venta
- * todavía no se definió, contarla como negro es afirmar algo que nadie
- * dijo. Devuelve null cuando no hay ninguna marcada — no 0%, que se
- * leería como "le vende todo en negro".
+ * El denominador excluye las ventas sin definir a propósito: si una
+ * venta todavía no se definió, contarla como negro es afirmar algo que
+ * nadie dijo. Devuelve null cuando no hay ninguna definida — no 0%, que
+ * se leería como "le vende todo en negro".
  */
 export function porcentajeEnBlanco(resumen: ResumenCliente): number | null {
-  const marcadas = resumen.blanco + resumen.negro;
-  if (marcadas === 0) return null;
-  return Math.round((resumen.blanco / marcadas) * 100);
+  const pesos = resumen.blanco + resumen.negro;
+  if (pesos === 0) return null;
+  return Math.round((resumen.blanco / pesos) * 100);
 }
 
 export interface ClienteConResumen extends Cliente {
