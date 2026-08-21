@@ -52,12 +52,32 @@ export function HojaDocumento({ doc }: { doc: Documento }) {
         {LEYENDA_NO_FISCAL}
       </p>
 
-      <section className="mt-6">
-        <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">Cliente</p>
-        <p className="mt-1 font-medium">{doc.clienteNombre}</p>
-        {doc.clienteDireccion && <p className="text-ink-soft text-sm">{doc.clienteDireccion}</p>}
-        {doc.clienteCuit && (
-          <p className="text-faint font-mono text-sm tabular-nums">CUIT {doc.clienteCuit}</p>
+      <section className="mt-6 flex flex-wrap justify-between gap-6">
+        <div>
+          <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+            Cliente
+          </p>
+          <p className="mt-1 font-medium">{doc.clienteNombre}</p>
+          {doc.clienteDireccion && <p className="text-ink-soft text-sm">{doc.clienteDireccion}</p>}
+          {doc.clienteCuit && (
+            <p className="text-faint font-mono text-sm tabular-nums">CUIT {doc.clienteCuit}</p>
+          )}
+        </div>
+
+        {/* La obra va al lado del cliente y no al pie: es lo primero que
+            mira el chofer cuando le dan el papel. */}
+        {(doc.obra || doc.distanciaKm) && (
+          <div className="text-right">
+            <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+              Entrega
+            </p>
+            {doc.obra && <p className="mt-1 font-medium">{doc.obra}</p>}
+            {doc.distanciaKm ? (
+              <p className="text-ink-soft font-mono text-sm tabular-nums">
+                a {dec(doc.distanciaKm)} km de planta
+              </p>
+            ) : null}
+          </div>
         )}
       </section>
 

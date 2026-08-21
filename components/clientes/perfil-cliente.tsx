@@ -1,5 +1,6 @@
 'use client';
 
+import type { Route } from 'next';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, FileText, Pencil, Receipt, UserCheck, UserMinus } from 'lucide-react';
@@ -9,13 +10,10 @@ import { cn } from '@/lib/utils';
 import { Cifra } from '@/components/dominio/cifra';
 import { EncabezadoPagina } from '@/components/dominio/encabezado-pagina';
 import { Estado, MarcaFiscalDeVenta } from '@/components/dominio/estado';
-import { DialogoDocumento } from './dialogo-documento';
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import { TarjetaKpi } from '@/components/dominio/tarjeta-kpi';
 import { Button } from '@/components/ui/button';
 import { buscarLocal, editarLocal, parcheLocal } from '@/lib/datos/locales';
-import type { Carga } from '@/lib/datos/tipos';
-import type { TipoDocumento } from '@/lib/dominio/documentos';
 import type { PerfilCliente as Perfil } from '@/lib/datos/clientes';
 import { porcentajeEnBlanco } from '@/lib/dominio/clientes';
 import { $, dec, fechaDeMomento, fechaLargaDeMomento, hora, num } from '@/lib/formato';
@@ -42,11 +40,6 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
   const [montado, setMontado] = useState(false);
   const [editando, setEditando] = useState(false);
   const [dandoBaja, setDandoBaja] = useState(false);
-  /** Que documento se esta emitiendo, y de que carga si sale de una. */
-  const [documento, setDocumento] = useState<{
-    tipo: TipoDocumento;
-    carga?: Carga;
-  } | null>(null);
 
   function refrescar() {
     if (perfil) {
@@ -132,7 +125,10 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
         }
         acciones={
           <>
-            <Button variant="outline" onClick={() => setDocumento({ tipo: 'presupuesto' })}>
+            <Button
+              variant="outline"
+              render={<Link href={`/clientes/${id}/emitir?tipo=presupuesto` as Route} />}
+            >
               <FileText data-icon="inline-start" />
               Presupuesto
             </Button>
@@ -224,7 +220,11 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => setDocumento({ tipo: 'remito', carga: v })}
+                    render={
+                      <Link
+                        href={`/clientes/${id}/emitir?tipo=remito&carga=${v.id}` as Route}
+                      />
+                    }
                     aria-label={`Emitir remito de la carga del ${fechaDeMomento(v.momento)}`}
                     title="Emitir remito"
                   >
@@ -288,15 +288,6 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
         onCerrar={() => setEditando(false)}
         onGuardar={guardar}
       />
-      {documento && (
-        <DialogoDocumento
-          abierto
-          tipo={documento.tipo}
-          carga={documento.carga}
-          cliente={datos}
-          onCerrar={() => setDocumento(null)}
-        />
-      )}
       <DialogoBaja
         cliente={dandoBaja ? datos : null}
         onCerrar={() => setDandoBaja(false)}
