@@ -11,6 +11,7 @@ import { Cifra } from '@/components/dominio/cifra';
 import { EncabezadoPagina } from '@/components/dominio/encabezado-pagina';
 import { Estado, MarcaFiscalDeVenta } from '@/components/dominio/estado';
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
+import { DocumentosDelCliente } from '@/components/clientes/documentos-del-cliente';
 import { TarjetaKpi } from '@/components/dominio/tarjeta-kpi';
 import { Button } from '@/components/ui/button';
 import { buscarLocal, editarLocal, parcheLocal } from '@/lib/datos/locales';
@@ -187,7 +188,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_20rem]">
         <section className="min-w-0">
-          <h2 className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+          <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
             Sus cargas
           </h2>
 
@@ -236,11 +237,15 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
               ))}
             </ul>
           )}
+
+          <div className="mt-6">
+            <DocumentosDelCliente clienteId={id} />
+          </div>
         </section>
 
         <aside className="grid min-w-0 content-start gap-4">
           <div className="border-line bg-card shadow-tarjeta rounded-lg border p-4">
-            <h3 className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
+            <h3 className="rotulo-obra text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
               Datos
             </h3>
             <dl className="mt-3 grid gap-2 text-sm">

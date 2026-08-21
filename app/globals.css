@@ -361,8 +361,61 @@
  * lleva muchas líneas, la hoja crece en vez de recortar.
  */
 .papel {
-  aspect-ratio: 210 / 297;
+  /* En pantalla la hoja crece con lo que dice, y nada más: media carilla
+     en blanco no aporta información y empuja todo hacia abajo. Al
+     imprimir el navegador pagina en A4 de todos modos, así que el formato
+     real no se pierde. */
+  min-height: 22rem;
   box-shadow: var(--sombra-flotante);
+}
+
+/**
+ * La mesa de trabajo sobre la que se apoya el papel.
+ *
+ * Retícula de plano de obra: el guiño técnico ya es lenguaje del
+ * proyecto —los diagramas de los nueve apartados están dibujados sobre
+ * papel cuadriculado— y acá hace que la hoja se lea como algo apoyado en
+ * un tablero, no flotando en la nada.
+ *
+ * La línea va al 45% del token: cualquier cosa más fuerte compite con el
+ * contenido del documento.
+ */
+.mesa-tecnica {
+  background-color: var(--sunk);
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in oklch, var(--line-strong) 45%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--line-strong) 45%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 22px 22px;
+}
+
+/**
+ * El rótulo de sección con marca de obra.
+ *
+ * Los rótulos eran gris chico y desaparecían. La barrita de color a la
+ * izquierda los ancla sin subirles el tamaño — es la misma lógica de una
+ * etiqueta de silo o de un cartel de planta.
+ */
+.rotulo-obra {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rotulo-obra::before {
+  content: '';
+  width: 3px;
+  height: 0.85em;
+  flex: none;
+  border-radius: 1px;
+  background: var(--marca);
 }
 
 /**
@@ -398,8 +451,11 @@
 
 @media print {
   .papel {
-    aspect-ratio: auto;
+    min-height: 0;
     box-shadow: none;
+  }
+  .mesa-tecnica {
+    background: none;
   }
   .zona-cambiada {
     animation: none;

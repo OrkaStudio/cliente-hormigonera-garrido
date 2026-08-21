@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, Pencil, Plus, Trash2 } from 'lucide-react';
 
 import { HojaDocumento, type ZonaHoja } from '@/components/documentos/hoja';
 import { Segmentado } from '@/components/dominio/segmentado';
@@ -183,7 +183,7 @@ export function EmisorDocumento({
           hoja, apoyada sobre un fondo hundido, y los controles quedan en
           una columna angosta al costado. */}
       <div className="mt-4 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="bg-sunk rounded-2xl p-4 sm:p-7 print:bg-transparent print:p-0">
+        <div className="mesa-tecnica border-line rounded-2xl border p-4 sm:p-7 print:border-0 print:bg-transparent print:p-0">
           <div className="papel bg-paper mx-auto max-w-2xl overflow-hidden rounded-sm print:max-w-none print:rounded-none">
             <HojaDocumento doc={borrador} resaltar={pulso} />
           </div>
@@ -209,7 +209,7 @@ export function EmisorDocumento({
                 conPrecios ? 'border-line bg-panel' : 'border-warn/40 bg-warn-soft',
               )}
             >
-              <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+              <p className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
                 Qué imprime
               </p>
               <Segmentado
@@ -239,8 +239,26 @@ export function EmisorDocumento({
 
           {editando ? (
             <>
+              {/* Entrar a editar es un acto deliberado, salir también: sin
+                  una salida explícita el panel se queda abierto para
+                  siempre y nadie sabe si lo que tocó quedó tomado. No
+                  guarda nada —el papel ya viene mostrando cada tecla— pero
+                  cierra el paréntesis y devuelve la pantalla a su estado
+                  de reposo. */}
+              {carga && (
+                <div className="border-line bg-panel flex items-center justify-between gap-3 rounded-xl border p-3">
+                  <p className="text-muted-foreground text-xs">
+                    Editando sobre la carga{' '}
+                    <span className="text-ink-soft font-mono">{carga.id}</span>
+                  </p>
+                  <Button size="sm" variant="outline" onClick={() => setEditando(false)}>
+                    <Check data-icon="inline-start" />
+                    Listo
+                  </Button>
+                </div>
+              )}
             <section className="border-line bg-panel grid gap-3 rounded-xl border p-4">
-              <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+              <p className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
                 Detalle
               </p>
 
@@ -336,7 +354,7 @@ export function EmisorDocumento({
                 camión va a otro lado. Las demás explicaban campos que ya se
                 explican solos por su nombre. */}
             <section className="border-line bg-panel grid gap-3 rounded-xl border p-4">
-              <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+              <p className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
                 Entrega
               </p>
 

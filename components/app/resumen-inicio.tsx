@@ -160,7 +160,7 @@ export function ResumenInicio({
         </section>
 
         <section className="mt-9">
-          <h2 className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+          <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
             Requiere acción
           </h2>
 
@@ -192,7 +192,7 @@ export function ResumenInicio({
 
         <div className="mt-9 grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <section className="min-w-0">
-            <h2 className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+            <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
               Cargas {d.etiquetaRango}
             </h2>
 
@@ -325,7 +325,7 @@ export function ResumenInicio({
           </section>
 
           <section>
-            <h2 className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
+            <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
               Materiales
             </h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
