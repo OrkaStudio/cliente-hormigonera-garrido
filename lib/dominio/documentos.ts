@@ -39,6 +39,21 @@ export interface Documento {
    * promesa que no se puede cumplir tres semanas despues.
    */
   validoHasta?: string;
+  /**
+   * Adonde va el hormigon. Suele NO ser la direccion fiscal del cliente:
+   * un corralon factura en su local y recibe en la obra. Es lo primero
+   * que mira el chofer, asi que va arriba y en grande.
+   */
+  obra?: string | null;
+  /**
+   * A cuantos kilometros queda la entrega.
+   *
+   * Es un DATO del documento, no una tarifa: la app no calcula el flete
+   * a partir del km. Se imprime igual en el remito sin precios, porque
+   * al chofer le sirve saber el viaje que tiene aunque el numero de
+   * plata no le corresponda.
+   */
+  distanciaKm?: number | null;
   /** De que carga salio, cuando salio de una. Para poder rastrearlo. */
   cargaId?: string;
   notas?: string;
