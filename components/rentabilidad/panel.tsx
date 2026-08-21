@@ -6,7 +6,6 @@ import { ArrowDownRight, ArrowUpRight, Info, Minus } from 'lucide-react';
 import { BarraSuperior } from '@/components/app/barra-superior';
 import { FiltroRango } from '@/components/app/filtro-rango';
 import { BarrasMes } from '@/components/graficos/barras-mes';
-import { MargenPorDistancia } from '@/components/graficos/margen-por-distancia';
 import { CostosFijos } from '@/components/rentabilidad/costos-fijos';
 import type { DatosRentabilidad } from '@/lib/datos/rentabilidad';
 import { $, dec, num } from '@/lib/formato';
@@ -49,6 +48,13 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
     etiqueta: m.etiqueta,
     valor: m.resumen.facturado,
     detalle: $(m.resumen.facturado),
+    parcial: m.enCurso,
+  }));
+
+  const serieGasoil = d.meses.map((m) => ({
+    etiqueta: m.etiqueta,
+    valor: Math.round(m.combustible),
+    detalle: `${$(Math.round(m.combustible))} · ${Math.round(m.km).toLocaleString('es-AR')} km`,
     parcial: m.enCurso,
   }));
 
@@ -182,18 +188,11 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
           </section>
 
           <section className="border-line bg-panel shadow-tarjeta rounded-xl border p-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
-                Qué queda según la distancia
-              </h2>
-              {d.viaje.kmLimite && (
-                <span className="text-faint font-mono text-xs tabular-nums">
-                  se come todo a los {Math.round(d.viaje.kmLimite)} km
-                </span>
-              )}
-            </div>
+            <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
+              Gasoil por mes
+            </h2>
             <div className="mt-4">
-              <MargenPorDistancia datos={d.viaje.porFranja} formato={$$} />
+              <BarrasMes datos={serieGasoil} formato={$$} serie="s2" />
             </div>
           </section>
         </div>

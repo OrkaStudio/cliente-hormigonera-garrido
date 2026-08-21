@@ -26,10 +26,13 @@ export interface PuntoMes {
 export function BarrasMes({
   datos,
   formato,
+  serie = 's1',
   className,
 }: {
   datos: PuntoMes[];
   formato: (n: number) => string;
+  /** Qué color de la serie usa. Fijo por gráfico, nunca por barra. */
+  serie?: 's1' | 's2' | 's3' | 's4';
   className?: string;
 }) {
   const [activo, setActivo] = useState<number | null>(null);
@@ -57,16 +60,13 @@ export function BarrasMes({
               <span
                 className={cn(
                   'w-full rounded-t-[4px] transition-opacity',
-                  d.parcial ? 'bg-s1/35' : 'bg-s1',
                   activo !== null && !esActivo && 'opacity-40',
                 )}
                 style={{
                   height: `${alto}%`,
-                  ...(d.parcial
-                    ? {
-                        backgroundImage: `repeating-linear-gradient(45deg, var(--s1) 0 3px, transparent 3px 7px)`,
-                      }
-                    : {}),
+                  background: d.parcial
+                    ? `repeating-linear-gradient(45deg, var(--${serie}) 0 3px, transparent 3px 7px)`
+                    : `var(--${serie})`,
                 }}
               />
             </button>
