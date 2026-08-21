@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   MATERIALES_PLC,
@@ -36,9 +37,8 @@ const RECETAS = [
   { nombre: 'H-30', cemento: 350, agua: 165, aridos: 1900 },
 ];
 
-/** Cuánto dura un ciclo en pantalla. El real ronda los 5 minutos. */
+/** Cuánto dura el ciclo de ejemplo. El real ronda los 5 minutos. */
 const DURACION_MS = 22_000;
-const PAUSA_ENTRE_CICLOS_MS = 7_000;
 
 /** El cemento entra primero y el aditivo último, como en la planta. */
 const ORDEN: Record<string, [number, number]> = {
@@ -81,6 +81,8 @@ export function CicloEnVivo({
 }) {
   const [ciclo, setCiclo] = useState<CicloPlc | null>(null);
   const [estado, setEstado] = useState<EstadoPlc>('parado');
+  /** Cuántas veces se corrió el ejemplo. Dispara el efecto de nuevo. */
+  const [corrida, setCorrida] = useState(0);
   // Arranca por encima del ultimo correlativo sembrado: si empieza en el
   // mismo numero, la carga nueva colisiona con una que ya esta en la
   // lista y React se queda con una sola.
@@ -88,6 +90,17 @@ export function CicloEnVivo({
   const terminada = useRef(onCargaTerminada);
   terminada.current = onCargaTerminada;
 
+  /**
+   * Corre UN ciclo y para.
+   *
+   * Antes esto era un bucle: arrancaba de nuevo cada siete segundos y
+   * paría una carga cada medio minuto. A los diez minutos con la pantalla
+   * abierta había veinte cargas que nadie produjo, y peor, daba a
+   * entender que la planta larga un pastón cada treinta segundos.
+   *
+   * Es un ejemplo de cómo se ve un ciclo, no una planta simulada
+   * funcionando sola. Se repite a pedido.
+   */
   useEffect(() => {
     let vivo = true;
     let raf = 0;
@@ -129,7 +142,6 @@ export function CicloEnVivo({
         // render de otro componente, que es lo que React avisa.
         setEstado('parado');
         terminada.current?.({ ...avanzado, estado: 'parado', avance: 1 });
-        timer = setTimeout(arrancar, PAUSA_ENTRE_CICLOS_MS);
       };
 
       raf = requestAnimationFrame(tick);
@@ -142,7 +154,7 @@ export function CicloEnVivo({
       cancelAnimationFrame(raf);
       clearTimeout(timer);
     };
-  }, []);
+  }, [corrida]);
 
   const dosificando = estado === 'automatico';
 
@@ -156,6 +168,7 @@ export function CicloEnVivo({
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
           La planta ahora
+          <span className="text-faint ml-1.5 normal-case tracking-normal">· ejemplo</span>
         </h2>
 
         <span
@@ -183,11 +196,23 @@ export function CicloEnVivo({
       </div>
 
       {!ciclo || !dosificando ? (
-        <p className="text-muted-foreground mt-3 text-sm">
-          {ciclo
-            ? `Terminó el batch ${ciclo.batch}. La carga ya está abajo, esperando cliente.`
-            : 'Esperando que arranque un ciclo.'}
-        </p>
+        <div className="mt-3">
+          <p className="text-muted-foreground text-sm">
+            {ciclo
+              ? `Terminó el batch ${ciclo.batch}. La carga quedó abajo, esperando cliente.`
+              : 'Esperando que arranque un ciclo.'}
+          </p>
+          {ciclo && (
+            <button
+              type="button"
+              onClick={() => setCorrida((n) => n + 1)}
+              className="border-line hover:border-line-strong hover:bg-sunk text-ink-soft mt-2.5 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors"
+            >
+              <RotateCw className="size-3" aria-hidden />
+              Ver otro ciclo
+            </button>
+          )}
+        </div>
       ) : (
         <>
           <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
