@@ -71,7 +71,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
           }
           accion={
             montado ? (
-              <Button variant="outline" render={<Link href="/clientes" />}>
+              <Button nativeButton={false} variant="outline" render={<Link href="/clientes" />}>
                 Volver a Clientes
               </Button>
             ) : undefined
@@ -126,6 +126,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
         acciones={
           <>
             <Button
+              nativeButton={false}
               variant="outline"
               render={<Link href={`/clientes/${id}/emitir?tipo=presupuesto` as Route} />}
             >
@@ -218,6 +219,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
                       aparte porque es donde Jose mira cuando el cliente
                       llama pidiendo el papel de una entrega puntual. */}
                   <Button
+                    nativeButton={false}
                     variant="ghost"
                     size="icon-sm"
                     render={

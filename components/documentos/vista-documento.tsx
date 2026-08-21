@@ -37,7 +37,7 @@ export function VistaDocumento({ numero }: { numero: string }) {
           descripcion="Los documentos todavía se guardan en el navegador donde se emitieron. Si lo emitiste en otra computadora, o borraste los datos del sitio, no está acá."
         />
         <div className="mt-6 flex justify-center">
-          <Button variant="outline" render={<Link href="/clientes" />}>
+          <Button nativeButton={false} variant="outline" render={<Link href="/clientes" />}>
             Volver a Clientes
           </Button>
         </div>
