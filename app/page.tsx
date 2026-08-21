@@ -4,9 +4,9 @@ import { AlertaResoluble } from '@/components/app/alerta-resoluble';
 import { BarraSuperior } from '@/components/app/barra-superior';
 import { FiltroRango } from '@/components/app/filtro-rango';
 import { Alerta } from '@/components/dominio/alerta';
-import { BarraDesvio } from '@/components/dominio/barra-desvio';
 import { Estado, MarcaFiscalDeVenta } from '@/components/dominio/estado';
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
+import { textoPorTono, tonoDeDesvio } from '@/components/dominio/tono';
 import { SemaforoStock } from '@/components/dominio/semaforo-stock';
 import { TarjetaKpi } from '@/components/dominio/tarjeta-kpi';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { traerInicio, type Rango } from '@/lib/datos/inicio';
+import { detalleDeBalanzas, formatoDesvio, peorDesvio } from '@/lib/dominio/desvio';
 import { $, dec, hora } from '@/lib/formato';
 
 /** 19/8 — solo el día y el mes, para las filas de rangos largos. */
@@ -176,14 +177,18 @@ export default async function Inicio({
                       </TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead className="w-14 text-right">m³</TableHead>
-                      <TableHead className="w-32">Desvío</TableHead>
+                      <TableHead className="w-24 text-right" title="La balanza que más se corrió en esa carga. Pasá el mouse por encima del número para ver las cuatro.">
+                        Desvío
+                      </TableHead>
                       <TableHead className="w-32 text-right">Total</TableHead>
                       <TableHead className="w-24">Estado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {d.ultimas.map((c) => {
-                      const cem = c.pesadas.find((p) => p.material === 'Cemento');
+                      // La balanza que mas se corrio, no el promedio: un
+                      // promedio de +3% y -3% da 0% y esconde el problema.
+                      const peor = peorDesvio(c);
                       const accionable = !c.clienteId;
                       return (
                         <TableRow
@@ -205,13 +210,22 @@ export default async function Inicio({
                             <span className="text-faint ml-1.5 font-mono text-xs">{c.receta}</span>
                           </TableCell>
                           <TableCell className="text-right tabular-nums">{c.m3}</TableCell>
-                          <TableCell>
-                            {cem && (
+                          <TableCell className="text-right">
+                            {peor ? (
                               <span
-                                title={`Cemento: pidió ${cem.objetivo.toLocaleString('es-AR')} kg, pesó ${cem.real.toLocaleString('es-AR')} kg`}
+                                className={cn(
+                                  'font-mono text-sm tabular-nums',
+                                  textoPorTono[tonoDeDesvio(peor.objetivo, peor.real)],
+                                )}
+                                title={detalleDeBalanzas(c)}
                               >
-                                <BarraDesvio objetivo={cem.objetivo} real={cem.real} />
+                                {formatoDesvio(peor.porcentaje)}
+                                <span className="text-faint ml-1 text-xs">
+                                  {peor.material.slice(0, 3).toLowerCase()}
+                                </span>
                               </span>
+                            ) : (
+                              <span className="text-faint">—</span>
                             )}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">

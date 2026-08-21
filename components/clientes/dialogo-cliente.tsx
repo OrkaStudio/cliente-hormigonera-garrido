@@ -25,6 +25,7 @@ const EN_BLANCO: DatosCliente = {
   cuit: null,
   notas: null,
   activo: true,
+  generico: false,
 };
 
 export interface DialogoClienteProps {

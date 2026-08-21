@@ -74,6 +74,19 @@ export interface Cliente {
    * deja de aparecer al asignar.
    */
   activo: boolean;
+  /**
+   * El comprador esporadico que no justifica darle de alta un perfil
+   * (R4 del apartado 4). Hay uno solo: "Mostrador".
+   *
+   * Es una BOCA, no una persona: no tiene CUIT, ni telefono, ni
+   * direccion, y su historial mezcla gente distinta. Por eso no se
+   * edita ni se desactiva — si alguien lo apaga, las ventas sueltas se
+   * quedan sin donde caer y vuelven a ser cargas sin cliente.
+   *
+   * Es un campo y no un id hardcodeado para que sobreviva a la
+   * migracion a Supabase: la fila puede cambiar de id, la marca no.
+   */
+  generico: boolean;
 }
 
 export interface Material {

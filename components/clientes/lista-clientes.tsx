@@ -144,14 +144,28 @@ export function ListaClientes({ sembrados }: { sembrados: ClienteConResumen[] })
               </TableHeader>
               <TableBody>
                 {visibles.map((c) => (
-                  <TableRow key={c.id}>
+                  /* Toda la fila entra al cliente. El link sigue siendo un
+                     <a> de verdad y se estira con ::after sobre la fila, en
+                     vez de un onClick: asi ctrl+click y click del medio
+                     siguen abriendo en pestana nueva, y el foco por teclado
+                     cae en un solo lugar. Los botones de la derecha se
+                     levantan con z-10 para quedar por encima. */
+                  <TableRow key={c.id} className="group relative cursor-pointer">
                     <TableCell>
                       <Link
                         href={`/clientes/${c.id}`}
-                        className="font-medium hover:underline underline-offset-4"
+                        className="font-medium underline-offset-4 group-hover:underline after:absolute after:inset-0 after:content-['']"
                       >
                         {c.nombre}
                       </Link>
+                      {c.generico && (
+                        <Estado
+                          className="ml-2 align-middle"
+                          title="La venta suelta. No se edita ni se desactiva: si se apaga, las ventas sin cliente se quedan sin donde caer."
+                        >
+                          Venta suelta
+                        </Estado>
+                      )}
                       {!c.activo && (
                         <Estado className="ml-2 align-middle">Inactivo</Estado>
                       )}
@@ -174,27 +188,32 @@ export function ListaClientes({ sembrados }: { sembrados: ClienteConResumen[] })
                       {c.resumen.facturado ? $(c.resumen.facturado) : <span className="text-faint">—</span>}
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-end gap-0.5">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => setEditando(c)}
-                          aria-label={`Editar ${c.nombre}`}
-                          title="Editar"
-                        >
-                          <Pencil />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => setDandoBaja(c)}
-                          aria-label={
-                            c.activo ? `Desactivar ${c.nombre}` : `Reactivar ${c.nombre}`
-                          }
-                          title={c.activo ? 'Desactivar' : 'Reactivar'}
-                        >
-                          {c.activo ? <UserMinus /> : <UserCheck />}
-                        </Button>
+                      {/* z-10: por encima del link estirado de la fila. */}
+                      <div className="relative z-10 flex justify-end gap-0.5">
+                        {!c.generico && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => setEditando(c)}
+                              aria-label={`Editar ${c.nombre}`}
+                              title="Editar"
+                            >
+                              <Pencil />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => setDandoBaja(c)}
+                              aria-label={
+                                c.activo ? `Desactivar ${c.nombre}` : `Reactivar ${c.nombre}`
+                              }
+                              title={c.activo ? 'Desactivar' : 'Reactivar'}
+                            >
+                              {c.activo ? <UserMinus /> : <UserCheck />}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

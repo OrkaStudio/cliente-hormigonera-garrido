@@ -10,6 +10,8 @@ export interface EstadoProps {
   /** Un punto de color al principio. Útil en tablas densas. */
   punto?: boolean;
   className?: string;
+  /** Tooltip. En la oficina hay mouse: se confirmo con Fran el 21/08. */
+  title?: string;
 }
 
 /**
@@ -17,9 +19,16 @@ export interface EstadoProps {
  * (pendiente / asignada / anulada), para el stock (normal / bajo /
  * quiebre) y para la marca fiscal.
  */
-export function Estado({ children, tono = 'neutro', punto = false, className }: EstadoProps) {
+export function Estado({
+  children,
+  tono = 'neutro',
+  punto = false,
+  className,
+  title,
+}: EstadoProps) {
   return (
     <span
+      title={title}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap',
         fondoPorTono[tono],
