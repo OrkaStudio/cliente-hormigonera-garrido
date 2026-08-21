@@ -41,34 +41,58 @@ function desde(rango: Rango, ahora: Date) {
   return d;
 }
 
-export async function traerInicio(rango: Rango = 'hoy', ahora = new Date()) {
-  const cargas = generarCargas(ahora);
+/**
+ * Todo lo que Inicio muestra, derivado de las cargas. Puro y sincrónico.
+ *
+ * Está separado de `traerInicio` porque tiene que poder correr DOS veces:
+ * una en el servidor con lo que vino de la fuente, y otra en el navegador
+ * después de aplicarle las asignaciones que todavía viven en
+ * `localStorage`. Si la derivación viviera adentro del fetch, asignarle
+ * un cliente a una carga no movería ni el KPI ni la alerta.
+ *
+ * Cuando exista Supabase, la asignación se guarda de verdad y el segundo
+ * pase deja de hacer falta — pero esta función se queda igual.
+ */
+export function derivarResumen(cargas: Carga[], rango: Rango, ahora: Date) {
   const corte = desde(rango, ahora);
-  const deHoy = cargas.filter((c) => new Date(c.momento) >= corte);
-
-  const planta = estadoDePlanta(cargas, ahora);
-  const alertas = derivarAlertas(cargas, MATERIALES, ahora);
+  const enRango = cargas.filter((c) => new Date(c.momento) >= corte);
 
   return {
     ahora,
     rango,
     etiquetaRango: ETIQUETA[rango],
-    planta,
-    alertas,
+    planta: estadoDePlanta(cargas, ahora),
+    alertas: derivarAlertas(cargas, MATERIALES, ahora),
     materiales: MATERIALES,
+    cargas,
     hoy: {
-      cargas: deHoy.length,
-      m3: deHoy.reduce((a, c) => a + c.m3, 0),
-      facturado: deHoy.reduce((a, c) => a + c.total, 0),
-      sinAsignar: deHoy.filter((c) => !c.clienteId).length,
+      cargas: enRango.length,
+      m3: enRango.reduce((a, c) => a + c.m3, 0),
+      facturado: enRango.reduce((a, c) => a + c.total, 0),
+      sinAsignar: enRango.filter((c) => !c.clienteId).length,
     },
-    ultimas: [...deHoy]
+    ultimas: [...enRango]
       .reverse()
       .slice(0, rango === 'hoy' ? 8 : 12)
       .map(conNombreDeCliente),
     /** Cuántas hay en total en el rango, para no mentir con el pie de tabla. */
-    totalCargas: deHoy.length,
+    totalCargas: enRango.length,
   };
 }
 
-export type DatosInicio = Awaited<ReturnType<typeof traerInicio>>;
+export async function traerInicio(rango: Rango = 'hoy', ahora = new Date()) {
+  return derivarResumen(generarCargas(ahora), rango, ahora);
+}
+
+export type DatosInicio = ReturnType<typeof derivarResumen>;
+
+/** Los clientes a los que se le puede asignar una carga. */
+export function clientesAsignables() {
+  return CLIENTES.filter((c) => c.activo).map((c) => ({
+    id: c.id,
+    nombre: c.nombre,
+    generico: c.generico,
+  }));
+}
+
+export type ClienteAsignable = ReturnType<typeof clientesAsignables>[number];

@@ -184,7 +184,7 @@ export function derivarAlertas(
         tono: 'warn' as const,
       })),
       pieDetalle:
-        'Asignar el cliente es lo que las convierte en venta. La pantalla para hacerlo es el apartado 2, todavía sin construir.',
+        'Asignar el cliente es lo que las convierte en venta. El precio se propone desde la receta y queda congelado al asignar: no se recalcula nunca más.',
     });
   }
 
