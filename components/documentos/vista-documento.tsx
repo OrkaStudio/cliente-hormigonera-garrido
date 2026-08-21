@@ -2,13 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Printer, Send } from 'lucide-react';
 
 import { HojaDocumento } from '@/components/documentos/hoja';
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import { Button } from '@/components/ui/button';
 import { buscarDocumento } from '@/lib/datos/documentos-locales';
+import { traerPerfilCliente } from '@/lib/datos/clientes';
 import type { Documento } from '@/lib/dominio/documentos';
+import {
+  enlaceWhatsapp,
+  mensajeDeDocumento,
+  telefonoParaWhatsapp,
+} from '@/lib/dominio/whatsapp';
 
 /**
  * La pantalla de un documento emitido.
@@ -19,6 +25,7 @@ import type { Documento } from '@/lib/dominio/documentos';
 export function VistaDocumento({ numero }: { numero: string }) {
   const [doc, setDoc] = useState<Documento | null>(null);
   const [buscado, setBuscado] = useState(false);
+  const [wsp, setWsp] = useState<{ href: string; nombre: string } | null>(null);
 
   // localStorage no existe en el servidor: se lee despues de montar o la
   // hidratacion no coincide con el HTML.
@@ -26,6 +33,38 @@ export function VistaDocumento({ numero }: { numero: string }) {
     setDoc(buscarDocumento(numero));
     setBuscado(true);
   }, [numero]);
+
+  /**
+   * El enlace de WhatsApp se arma con el teléfono que el cliente tiene
+   * HOY, no con uno guardado dentro del documento: un remito de hace seis
+   * meses no debería mandar a un número que ya cambió.
+   *
+   * Mostrador no tiene teléfono a propósito — es una boca, no una
+   * persona — así que ahí el botón no aparece.
+   */
+  useEffect(() => {
+    if (!doc) return;
+    let vigente = true;
+
+    traerPerfilCliente(doc.clienteId)
+      .then((perfil) => {
+        if (!vigente || !perfil) return;
+        const tel = telefonoParaWhatsapp(perfil.telefono);
+        if (!tel) return;
+        const url = window.location.href;
+        setWsp({
+          href: enlaceWhatsapp(tel, mensajeDeDocumento(doc, url, perfil.contacto)),
+          nombre: perfil.contacto?.split(/\s+/)[0] ?? perfil.nombre,
+        });
+      })
+      .catch(() => {
+        /* Sin teléfono utilizable, simplemente no se ofrece el botón. */
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [doc]);
 
   if (!buscado) return null;
 
@@ -60,10 +99,20 @@ export function VistaDocumento({ numero }: { numero: string }) {
             {doc.clienteNombre}
           </Link>
 
-          <div className="flex items-center gap-3">
-            <span className="text-faint hidden text-xs sm:inline">
-              Ctrl+P y elegí “Guardar como PDF”
-            </span>
+          <div className="flex items-center gap-2">
+            {wsp && (
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={
+                  <a href={wsp.href} target="_blank" rel="noopener noreferrer" />
+                }
+                title={`Abre WhatsApp con el mensaje escrito para ${wsp.nombre}`}
+              >
+                <Send data-icon="inline-start" />
+                Mandar por WhatsApp
+              </Button>
+            )}
             <Button onClick={() => window.print()}>
               <Printer data-icon="inline-start" />
               Imprimir o guardar PDF

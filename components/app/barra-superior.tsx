@@ -1,74 +1,76 @@
-'use client';
-
-import { EMPRESA } from '@/config/empresa';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { EMPRESA } from '@/config/empresa';
+
+const APARTADOS = [
+  { nombre: 'Inicio', href: '/' as const, activo: true },
+  { nombre: 'Cargas', href: null, activo: false },
+  { nombre: 'Ventas', href: null, activo: false },
+  { nombre: 'Clientes', href: '/clientes' as const, activo: false },
+  { nombre: 'Recetas', href: null, activo: false },
+  { nombre: 'Stock', href: null, activo: false },
+  { nombre: 'Rentabilidad', href: null, activo: false },
+];
 
 /**
  * La barra de la aplicación.
  *
- * Los apartados construidos son links de verdad y se ven siempre,
- * también en el teléfono: desde que existe una segunda pantalla, no
- * mostrarlos ahí deja al que abre desde el auto sin manera de llegar.
- *
- * Los que todavía no existen siguen siendo etiquetas muertas y siguen
- * escondidos abajo de `lg`. Son cinco carteles que no llevan a ningún
- * lado — en una pantalla de teléfono eso es ruido, no un menú.
+ * El hilo rojo de arriba y el apartado activo en rojo son los dos únicos
+ * lugares donde el color de marca aparece fuera de un estado. El sistema
+ * lo autoriza explícitamente para "logotipo, navegación activa y anillo
+ * de foco": no compite con el semáforo porque nunca cae adentro de los
+ * datos.
  */
-const APARTADOS = [
-  { nombre: 'Inicio', href: '/' },
-  { nombre: 'Cargas', href: null },
-  { nombre: 'Ventas', href: null },
-  { nombre: 'Clientes', href: '/clientes' },
-  { nombre: 'Recetas', href: null },
-  { nombre: 'Stock', href: null },
-  { nombre: 'Rentabilidad', href: null },
-] as const;
-
-export function BarraSuperior() {
-  const ruta = usePathname();
-
+export function BarraSuperior({ activo = 'Inicio' }: { activo?: string }) {
   return (
-    <header className="border-line bg-panel/85 sticky top-0 z-10 border-b backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
-        <Link
-          href="/"
-          className="font-heading text-accent text-lg leading-none font-bold tracking-tight"
-        >
-          {EMPRESA.marca}
+    <header className="border-line bg-panel/90 sticky top-0 z-20 border-b backdrop-blur">
+      {/* Un hilo de marca. Cuesta 2 px y le pone cara a la aplicación. */}
+      <div className="bg-marca h-[3px]" />
+
+      <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-8">
+        <Link href="/" className="flex items-baseline gap-2.5">
+          <span className="font-heading text-marca text-lg leading-none font-black tracking-tight">
+            {EMPRESA.marca}
+          </span>
+          <span className="text-muted-foreground hidden text-sm sm:inline">
+            {EMPRESA.planta}
+          </span>
         </Link>
-        <span className="text-muted-foreground hidden text-sm xl:inline">{EMPRESA.planta}</span>
 
-        <nav className="ml-auto flex items-center gap-1">
+        <nav className="ml-auto hidden items-center gap-0.5 lg:flex">
           {APARTADOS.map((a) => {
-            if (!a.href) {
-              return (
-                <span
-                  key={a.nombre}
-                  className="text-faint hidden cursor-not-allowed rounded-md px-2.5 py-1.5 text-sm lg:inline"
-                  title="Todavía no construido"
-                >
-                  {a.nombre}
-                </span>
-              );
-            }
+            const esActivo = a.nombre === activo;
+            const clase = cn(
+              'relative rounded-md px-2.5 py-1.5 text-sm transition-colors',
+              esActivo
+                ? 'text-ink font-semibold'
+                : a.href
+                  ? 'text-muted-foreground hover:text-ink hover:bg-sunk'
+                  : 'text-faint cursor-not-allowed',
+            );
 
-            const activo = a.href === '/' ? ruta === '/' : ruta.startsWith(a.href);
-            return (
-              <Link
-                key={a.nombre}
-                href={a.href}
-                aria-current={activo ? 'page' : undefined}
-                className={cn(
-                  'rounded-md px-2.5 py-1.5 text-sm',
-                  activo
-                    ? 'text-ink border-ink border-b-2 font-medium'
-                    : 'text-ink-soft hover:text-ink',
-                )}
-              >
+            const contenido = (
+              <>
                 {a.nombre}
+                {esActivo && (
+                  <span className="bg-marca absolute inset-x-2.5 -bottom-px h-0.5 rounded-full" />
+                )}
+              </>
+            );
+
+            return a.href && !esActivo ? (
+              <Link key={a.nombre} href={a.href} className={clase}>
+                {contenido}
               </Link>
+            ) : (
+              <span
+                key={a.nombre}
+                aria-current={esActivo ? 'page' : undefined}
+                className={clase}
+                title={a.href || esActivo ? undefined : 'Todavía no construido'}
+              >
+                {contenido}
+              </span>
             );
           })}
         </nav>

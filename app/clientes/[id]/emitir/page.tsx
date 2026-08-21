@@ -30,7 +30,7 @@ export default async function Emitir({
 
   return (
     <>
-      <BarraSuperior />
+      <BarraSuperior activo="Clientes" />
       <EmisorConDatos
         id={id}
         perfil={await traerPerfilCliente(id)}

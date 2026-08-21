@@ -69,8 +69,14 @@ export function ActualizacionEnVivo() {
   }, [router]);
 
   return (
-    <span className="text-faint inline-flex items-center gap-1.5 text-xs" role="status">
-      <span className="bg-ok inline-block size-1.5 shrink-0 rounded-full" aria-hidden />
+    /* En --plc, el color del dato que viene del autómata. No es un estado
+       del negocio —eso lo dice "Planta en línea"— sino el pulso de la
+       conexión, y el sistema reserva este azul justo para eso. */
+    <span
+      className="text-plc-text bg-plc-soft border-plc/20 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs"
+      role="status"
+    >
+      <span className="bg-plc inline-block size-1.5 shrink-0 rounded-full" aria-hidden />
       {ultima
         ? `Actualizado ${ultima.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}`
         : 'En vivo'}

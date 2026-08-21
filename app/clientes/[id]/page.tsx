@@ -17,7 +17,7 @@ export default async function Perfil({ params }: { params: Promise<{ id: string 
 
   return (
     <>
-      <BarraSuperior />
+      <BarraSuperior activo="Clientes" />
       <PerfilCliente perfil={perfil} id={id} />
     </>
   );

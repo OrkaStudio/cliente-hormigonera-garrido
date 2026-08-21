@@ -25,7 +25,7 @@ export default async function Clientes() {
 
   return (
     <>
-      <BarraSuperior />
+      <BarraSuperior activo="Clientes" />
 
       <main className="mx-auto max-w-6xl px-4 pt-5 pb-16 sm:px-6">
         <EncabezadoPagina
