@@ -101,6 +101,10 @@
        y uno de acción que son el mismo hacen que nadie sepa qué se
        puede tocar. */
     --color-plc: var(--plc);
+    --color-s1: var(--s1);
+    --color-s2: var(--s2);
+    --color-s3: var(--s3);
+    --color-s4: var(--s4);
     --color-plc-soft: var(--plc-soft);
     --color-plc-text: var(--plc-text);
 
@@ -180,6 +184,27 @@
     --danger-wash: color-mix(in oklch, var(--marca) 10%, transparent);
     --accent-wash: color-mix(in oklch, var(--accent) 12%, transparent);
 
+    /**
+     * Serie de datos para gráficos — s1 a s4, en ESTE orden.
+     *
+     * Existe aparte del semáforo a propósito: si una barra de "Hormigón
+     * H-25" fuera verde, competiría con el verde que significa "dentro de
+     * tolerancia" y nadie sabría si el color dice identidad o estado.
+     *
+     * Los cuatro pasaron las seis validaciones del validador de paletas
+     * (banda de luminosidad, piso de croma, separación para daltonismo,
+     * piso de visión normal y contraste ≥ 3:1 contra la superficie). Los
+     * del sistema no pasaban: el azul del PLC y el verde de tolerancia
+     * leen como gris cuando son un relleno grande.
+     *
+     * Se asignan en orden fijo y nunca se ciclan: una quinta serie se
+     * pliega en "Otros", no inventa un color.
+     */
+    --s1: #1A6DAD;
+    --s2: #CC7000;
+    --s3: #1E8A5F;
+    --s4: #A0459B;
+
     /* El dato que viene del PLC. */
     --plc: #356F97;
     --plc-soft: #F0F5F9;
@@ -253,6 +278,13 @@
     --danger-soft: #2E1412;
     --danger-text: #F58A80;
     --danger-wash: color-mix(in oklch, var(--marca) 14%, transparent);
+
+    /* Repasados contra el panel oscuro, no aclarados a ojo: los cuatro
+       vuelven a pasar el validador con la superficie #1C1913. */
+    --s1: #4692C8;
+    --s2: #C28230;
+    --s3: #3EA576;
+    --s4: #AF74AB;
 
     --plc: #7FB0D0;
     --plc-soft: #14212B;

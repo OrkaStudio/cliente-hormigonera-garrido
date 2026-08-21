@@ -1,44 +1,58 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import type { Route } from 'next';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
-import { Segmentado } from '@/components/dominio/segmentado';
+import { Segmentado, type OpcionSegmentada } from '@/components/dominio/segmentado';
 import { cn } from '@/lib/utils';
 
 export const RANGOS = ['hoy', 'semana', 'mes'] as const;
 export type Rango = (typeof RANGOS)[number];
 
-const OPCIONES = [
+const OPCIONES_INICIO: OpcionSegmentada[] = [
   { valor: 'hoy', etiqueta: 'Hoy' },
   { valor: 'semana', etiqueta: '7 días' },
   { valor: 'mes', etiqueta: 'Mes' },
 ];
 
 /**
- * El rango del resumen.
+ * El rango de un resumen.
  *
  * Son tres y no cuatro a propósito: el propio `Segmentado` avisa que con
- * más de tres opciones hay que usar un select. "Ayer" quedó afuera porque
- * es la que menos se mira — lo de ayer ya se sabe.
+ * más de tres opciones hay que usar un select.
  *
  * El valor vive en la URL: así el estado sobrevive al refresco automático
- * y un rango se puede compartir por WhatsApp tal cual se está mirando.
+ * y un rango se puede compartir tal cual se está mirando. Y como escribe
+ * sobre la ruta actual, sirve igual en Inicio y en Rentabilidad — que
+ * tienen rangos distintos pero el mismo comportamiento.
  */
-export function FiltroRango({ className }: { className?: string }) {
+export function FiltroRango({
+  opciones = OPCIONES_INICIO,
+  porDefecto = 'hoy',
+  className,
+}: {
+  opciones?: OpcionSegmentada[];
+  porDefecto?: string;
+  className?: string;
+}) {
   const router = useRouter();
+  const ruta = usePathname();
   const params = useSearchParams();
   const [pendiente, iniciar] = useTransition();
 
-  const actual = (params.get('rango') ?? 'hoy') as Rango;
+  const actual = params.get('rango') ?? porDefecto;
 
   return (
     <Segmentado
       className={cn(pendiente && 'opacity-60', className)}
-      opciones={OPCIONES}
+      opciones={opciones}
       valor={actual}
       onCambio={(v) => {
         iniciar(() => {
-          router.push(v === 'hoy' ? '/' : `/?rango=${v}`, { scroll: false });
+          // La ruta sale de usePathname, que no es una ruta literal: el
+          // tipado de rutas no puede verificarla y hay que afirmarla.
+          const destino = (v === porDefecto ? ruta : `${ruta}?rango=${v}`) as Route;
+          router.push(destino, { scroll: false });
         });
       }}
     />

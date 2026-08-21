@@ -109,17 +109,48 @@ function aleatorio(semilla: number) {
   };
 }
 
+/**
+ * Cuántos días de historia se generan.
+ *
+ * Eran 7, que alcanzaban para Inicio pero no para Rentabilidad: "contra
+ * el mes pasado" necesita que exista un mes pasado. Con cuatro meses hay
+ * tres comparaciones posibles y las series tienen forma.
+ */
+const DIAS_DE_HISTORIA = 120;
+
+/**
+ * Inflación mensual, en tanto por uno.
+ *
+ * No es decoración argentina: es lo que hace que el margen mienta. Los
+ * costos de material suben un poco MÁS que los precios de venta —el
+ * precio se pelea con el cliente, el costo lo pone el proveedor— así que
+ * el margen se achica solo aunque los números de facturación crezcan. Ese
+ * es exactamente el efecto que Rentabilidad tiene que dejar ver.
+ */
+const INFLACION_PRECIO = 0.038;
+const INFLACION_COSTO = 0.046;
+
+/** Cuánto se movió un valor entre hace `dia` días y hoy. */
+export function factorInflacion(dia: number, mensual: number): number {
+  const meses = dia / 30;
+  return 1 / Math.pow(1 + mensual, meses);
+}
+
 export function generarCargas(ahora: Date): Carga[] {
   const rnd = aleatorio(20260820);
   const cargas: Carga[] = [];
   const nombresReceta = Object.keys(RECETAS);
 
-  // 6 días hacia atrás, para que la ventana de tendencia tenga con qué comparar.
-  for (let dia = 6; dia >= 0; dia--) {
+  for (let dia = DIAS_DE_HISTORIA; dia >= 0; dia--) {
     const fecha = new Date(ahora);
     fecha.setDate(fecha.getDate() - dia);
     const esHoy = dia === 0;
-    const cuantas = esHoy ? 5 : 6 + Math.floor(rnd() * 3);
+
+    // Domingo no se produce, y el sábado a media máquina: sin esto la
+    // serie por día es una recta y no se parece a ninguna planta.
+    const diaSemana = fecha.getDay();
+    if (diaSemana === 0) continue;
+    const cuantas = esHoy ? 5 : diaSemana === 6 ? 2 + Math.floor(rnd() * 2) : 5 + Math.floor(rnd() * 4);
 
     for (let i = 0; i < cuantas; i++) {
       const receta = nombresReceta[Math.floor(rnd() * nombresReceta.length)]!;
@@ -135,9 +166,22 @@ export function generarCargas(ahora: Date): Carga[] {
         momento.setHours(7 + i * 2, Math.floor(rnd() * 55), 0, 0);
       }
 
-      // La deriva de la balanza de cemento: crece con los días.
-      const deriva = 0.006 + (6 - dia) * 0.0022;
+      /**
+       * La deriva de la balanza de cemento.
+       *
+       * Crece de a poco y se resetea cuando la mandan a calibrar. Los
+       * ciclos de 45 días son los que hacen que la alerta de Inicio se
+       * apague sola después de una calibración, en vez de quedar prendida
+       * para siempre.
+       */
+      const enElCiclo = dia % 45;
+      const deriva = 0.004 + (44 - enElCiclo) * 0.00042;
       const ruido = () => (rnd() - 0.5) * 0.004;
+
+      // Precio y costo de ESE día. La venta congela el precio del momento
+      // (R2): recalcular el pasado con el precio de hoy convertiría el
+      // historial en ficción.
+      const precioDelDia = Math.round(r.precio * factorInflacion(dia, INFLACION_PRECIO));
 
       // Quién puede comprar en este día. El inactivo sólo aparece en las
       // cargas viejas: dejó de comprar, pero su historial sigue ahí — que
@@ -147,7 +191,7 @@ export function generarCargas(ahora: Date): Carga[] {
       const cliente = sinCliente ? null : compradores[Math.floor(rnd() * compradores.length)]!;
       const clienteId = cliente?.id ?? null;
 
-      const total = sinCliente ? 0 : Math.round(r.m3PorCarga * r.precio);
+      const total = sinCliente ? 0 : Math.round(r.m3PorCarga * precioDelDia);
 
       // Como se reparte el corte fiscal en la maqueta. La mitad va
       // entera en blanco, un cuarto entero en negro, y un cuarto sale
@@ -174,6 +218,7 @@ export function generarCargas(ahora: Date): Carga[] {
         m3: r.m3PorCarga,
         clienteId,
         estado: sinCliente ? 'registrada' : dia === 0 ? 'asignada' : 'facturada',
+        precioM3: sinCliente ? null : precioDelDia,
         montoFacturado,
         total,
         pesadas: [
@@ -201,6 +246,31 @@ export function generarCargas(ahora: Date): Carga[] {
   }
 
   return cargas;
+}
+
+/**
+ * Costo por unidad de cada material, HOY.
+ *
+ * ⚠️ SEMBRADOS. Salen de precios de mercado verosímiles, no de compras
+ * reales: el apartado 6 no existe todavía. Cuando exista, el costo de
+ * referencia va a salir de la última compra y esta constante desaparece.
+ * Mientras tanto, la pantalla dice de dónde viene el número.
+ */
+export const COSTO_MATERIAL: Record<string, number> = {
+  // Calibrados para que el margen de materiales quede en 41–43% y el
+  // cemento pese 75–78% del costo, que es la proporción que reporta el
+  // rubro (70–80%). Con valores de mostrador —el cemento en bolsa ronda
+  // los $186/kg— el margen daba 6%, que no es el de ninguna planta: una
+  // hormigonera compra a granel, no en la ferretería.
+  Cemento: 120,
+  Arena: 6,
+  Piedra: 8,
+};
+
+/** Lo que costaba un material hace `dia` días. */
+export function costoMaterialEnDia(material: string, dia: number): number {
+  const hoy = COSTO_MATERIAL[material] ?? 0;
+  return hoy * factorInflacion(dia, INFLACION_COSTO);
 }
 
 export const MATERIALES: Material[] = [

@@ -9,7 +9,7 @@ const APARTADOS = [
   { nombre: 'Clientes', href: '/clientes' as const, activo: false },
   { nombre: 'Recetas', href: null, activo: false },
   { nombre: 'Stock', href: null, activo: false },
-  { nombre: 'Rentabilidad', href: null, activo: false },
+  { nombre: 'Rentabilidad', href: '/rentabilidad' as const, activo: false },
 ];
 
 /**

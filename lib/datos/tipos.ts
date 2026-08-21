@@ -39,6 +39,14 @@ export interface Carga {
   clienteId: string | null;
   estado: EstadoCarga;
   /**
+   * El precio por m3 que se le cobro a ESE cliente en ESE momento.
+   *
+   * Se congela en la venta (R2 del apartado 8). Sin esto, cambiar la
+   * lista de precios hoy reescribiria el margen del mes pasado y el
+   * historial dejaria de significar algo.
+   */
+  precioM3?: number | null;
+  /**
    * Cuanto de esta venta se facturo, EN PESOS.
    *
    * Se guarda el monto y no el porcentaje a proposito. El porcentaje se
