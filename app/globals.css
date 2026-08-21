@@ -290,3 +290,53 @@
         font-variant-numeric: tabular-nums;
     }
 }
+
+/* ============================================================
+   Impresión
+
+   Los documentos (presupuesto, remito) salen del navegador:
+   Ctrl+P → "Guardar como PDF". No hay librería de PDF ni
+   Chromium en el servidor — lo que se ve en pantalla es lo que
+   sale impreso, que además obliga a que la vista previa no
+   mienta.
+
+   Regla: acá NO se maqueta de nuevo. Sólo se apaga lo que en
+   papel no tiene sentido (barra de navegación, botones) y se
+   fuerza tinta sobre blanco.
+   ============================================================ */
+@media print {
+    /* El fondo crema de la app en papel sale gris sucio y se come
+       medio cartucho. El documento va en blanco, siempre. */
+    :root {
+        --background: #FFFFFF;
+        --paper: #FFFFFF;
+        --panel: #FFFFFF;
+    }
+
+    /* Nada de la aplicación acompaña al papel. */
+    [data-imprimir='no'] {
+        display: none !important;
+    }
+
+    @page {
+        size: A4;
+        margin: 16mm;
+    }
+
+    body {
+        background: #FFFFFF;
+    }
+
+    /* Que el navegador respete los colores de marca y de estado en
+       vez de imprimir todo gris. */
+    .hoja {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Una fila de la tabla partida entre dos hojas es ilegible. */
+    .hoja tr,
+    .hoja table {
+        break-inside: avoid;
+    }
+}

@@ -57,3 +57,18 @@ export const fechaLargaDeMomento = (iso: string) =>
 /** Un desvío con signo: +8 kg / −3 kg. */
 export const signo = (n: number, unidad = "kg") =>
   `${n > 0 ? "+" : n < 0 ? "−" : ""}${numero.format(Math.abs(n))} ${unidad}`;
+
+/**
+ * La fecha de un papel que se archiva: viernes, 21 de agosto de 2026.
+ *
+ * Lleva el año y las de pantalla no, a proposito. En la app el año se
+ * sobreentiende porque se mira lo de esta semana; un remito guardado en
+ * una carpeta se busca en enero del año que viene.
+ */
+export const fechaDeDocumento = (iso: string) =>
+  new Date(iso).toLocaleDateString("es-AR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });

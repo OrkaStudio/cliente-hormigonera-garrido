@@ -2,17 +2,20 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Pencil, UserCheck, UserMinus } from 'lucide-react';
+import { ArrowLeft, FileText, Pencil, Receipt, UserCheck, UserMinus } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
 import { Cifra } from '@/components/dominio/cifra';
 import { EncabezadoPagina } from '@/components/dominio/encabezado-pagina';
 import { Estado, MarcaFiscalDeVenta } from '@/components/dominio/estado';
+import { DialogoDocumento } from './dialogo-documento';
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import { TarjetaKpi } from '@/components/dominio/tarjeta-kpi';
 import { Button } from '@/components/ui/button';
 import { buscarLocal, editarLocal, parcheLocal } from '@/lib/datos/locales';
+import type { Carga } from '@/lib/datos/tipos';
+import type { TipoDocumento } from '@/lib/dominio/documentos';
 import type { PerfilCliente as Perfil } from '@/lib/datos/clientes';
 import { porcentajeEnBlanco } from '@/lib/dominio/clientes';
 import { $, dec, fechaDeMomento, fechaLargaDeMomento, hora, num } from '@/lib/formato';
@@ -39,6 +42,11 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
   const [montado, setMontado] = useState(false);
   const [editando, setEditando] = useState(false);
   const [dandoBaja, setDandoBaja] = useState(false);
+  /** Que documento se esta emitiendo, y de que carga si sale de una. */
+  const [documento, setDocumento] = useState<{
+    tipo: TipoDocumento;
+    carga?: Carga;
+  } | null>(null);
 
   function refrescar() {
     if (perfil) {
@@ -123,27 +131,33 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
           </span>
         }
         acciones={
-          datos.generico ? null : (
-            <>
-              <Button variant="outline" onClick={() => setEditando(true)}>
+          <>
+            <Button variant="outline" onClick={() => setDocumento({ tipo: 'presupuesto' })}>
+              <FileText data-icon="inline-start" />
+              Presupuesto
+            </Button>
+            {datos.generico ? null : (
+              <>
+                <Button variant="outline" onClick={() => setEditando(true)}>
                 <Pencil data-icon="inline-start" />
                 Editar
               </Button>
-              <Button variant="ghost" onClick={() => setDandoBaja(true)}>
-                {datos.activo ? (
-                  <>
-                    <UserMinus data-icon="inline-start" />
-                    Desactivar
-                  </>
-                ) : (
-                  <>
-                    <UserCheck data-icon="inline-start" />
-                    Reactivar
-                  </>
-                )}
-              </Button>
-            </>
-          )
+                <Button variant="ghost" onClick={() => setDandoBaja(true)}>
+                  {datos.activo ? (
+                    <>
+                      <UserMinus data-icon="inline-start" />
+                      Desactivar
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck data-icon="inline-start" />
+                      Reactivar
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </>
         }
       />
 
@@ -204,6 +218,18 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
                   <span className="w-16 text-right">
                     <MarcaFiscalDeVenta venta={v} />
                   </span>
+                  {/* Un remito por carga. Sale de acá y no de una pantalla
+                      aparte porque es donde Jose mira cuando el cliente
+                      llama pidiendo el papel de una entrega puntual. */}
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setDocumento({ tipo: 'remito', carga: v })}
+                    aria-label={`Emitir remito de la carga del ${fechaDeMomento(v.momento)}`}
+                    title="Emitir remito"
+                  >
+                    <Receipt />
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -262,6 +288,15 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
         onCerrar={() => setEditando(false)}
         onGuardar={guardar}
       />
+      {documento && (
+        <DialogoDocumento
+          abierto
+          tipo={documento.tipo}
+          carga={documento.carga}
+          cliente={datos}
+          onCerrar={() => setDocumento(null)}
+        />
+      )}
       <DialogoBaja
         cliente={dandoBaja ? datos : null}
         onCerrar={() => setDandoBaja(false)}

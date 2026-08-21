@@ -1,5 +1,6 @@
 'use client';
 
+import { EMPRESA } from '@/config/empresa';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -35,11 +36,9 @@ export function BarraSuperior() {
           href="/"
           className="font-heading text-accent text-lg leading-none font-bold tracking-tight"
         >
-          HORMIMONTE
+          {EMPRESA.marca}
         </Link>
-        <span className="text-muted-foreground hidden text-sm xl:inline">
-          Planta Monte · Ruta 3 y 41
-        </span>
+        <span className="text-muted-foreground hidden text-sm xl:inline">{EMPRESA.planta}</span>
 
         <nav className="ml-auto flex items-center gap-1">
           {APARTADOS.map((a) => {
