@@ -53,7 +53,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
   }, [perfil, id]);
   if (!datos) {
     return (
-      <main className="mx-auto max-w-6xl px-4 pt-5 pb-16 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-8">
         <Volver />
         <EstadoVacio
           className="mt-6"
@@ -88,7 +88,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
     refrescar();
   }
   return (
-    <main className="mx-auto max-w-6xl px-4 pt-5 pb-16 sm:px-6">
+    <main className="mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-8">
       <Volver />
       <EncabezadoPagina
         className="mt-3"

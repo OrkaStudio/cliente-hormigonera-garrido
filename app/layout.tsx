@@ -25,6 +25,14 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+/**
+ * El icono de la pestaña.
+ *
+ * Es la H de Hormimonte en el rojo y el negro que ya están muestreados
+ * del logo — no una identidad nueva. Existe para que la aplicación deje
+ * de pedir un favicon que no está: era el único 404 que quedaba. Cuando
+ * llegue el archivo del logo de verdad, se reemplaza.
+ */
 export const metadata: Metadata = {
   title: siteConfig.name,
   description: siteConfig.description,

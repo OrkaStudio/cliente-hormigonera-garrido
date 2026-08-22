@@ -166,7 +166,7 @@ export function EmisorDocumento({
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 pt-5 pb-16 sm:px-6">
+    <main className="mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-8">
       <Link
         href={`/clientes/${cliente.id}`}
         className="text-faint hover:text-ink inline-flex items-center gap-1.5 text-sm"

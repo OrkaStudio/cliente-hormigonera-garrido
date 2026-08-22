@@ -129,16 +129,24 @@ export function ListaClientes({ sembrados }: { sembrados: ClienteConResumen[] })
         />
       ) : (
         <>
+          <h2 className="rotulo-obra text-muted-foreground mt-6 font-mono text-xs tracking-widest uppercase">
+            {filtro === 'activos'
+              ? 'Activos'
+              : filtro === 'inactivos'
+                ? 'Inactivos'
+                : 'Todos'}
+          </h2>
+
           {/* Escritorio: la tabla, que deja comparar una columna de un vistazo. */}
-          <div className="border-line bg-card shadow-tarjeta mt-4 hidden overflow-hidden rounded-xl border sm:block">
+          <div className="border-line bg-card shadow-tarjeta mt-3 hidden overflow-hidden rounded-xl border sm:block">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead className="text-right">Última compra</TableHead>
-                  <TableHead className="text-right">m³</TableHead>
-                  <TableHead className="text-right">Ventas</TableHead>
-                  <TableHead className="text-right">Facturado</TableHead>
+                  <TableHead className="w-28 text-right">Última compra</TableHead>
+                  <TableHead className="w-24 text-right">m³</TableHead>
+                  <TableHead className="w-20 text-right">Ventas</TableHead>
+                  <TableHead className="w-40 text-right">Facturado</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>

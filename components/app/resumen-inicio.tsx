@@ -102,7 +102,7 @@ export function ResumenInicio({
             tarjeta deja las tres del mismo alto. */}
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
           <div>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
               Resumen {d.rango === 'hoy' ? 'del día' : d.etiquetaRango}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm first-letter:uppercase">
