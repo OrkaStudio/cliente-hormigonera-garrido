@@ -108,9 +108,22 @@ export interface Cliente {
 export interface Material {
   nombre: string;
   /** Existencia deducida — los silos no tienen balanza. */
-  restante: number;
-  capacidad: number;
+  restante: number | null;
+  capacidad: number | null;
+  /** En lo que lo pesa la planta. */
   unidad: string;
+  /** En lo que se lo compra: tonelada, metro cubico, litro (R4). */
+  unidadCompra?: string;
+  /** Cuantas unidades de planta entran en una de compra (R4). */
+  factorConversion?: number;
+  /**
+   * Si el PLC lo pesa. Un material que se echa con jarra no puede
+   * descontar stock solo (R5): o se carga a mano o se estima por receta,
+   * y hay que saber cual de las dos.
+   */
+  medidoPorPlc?: boolean;
+  /** El agua sale del pozo: se consume pero no hay existencia que cuidar. */
+  sinStock?: boolean;
   /** Consumo promedio por día con producción. */
   consumoDiario: number;
   /** Para que la alerta de reposición diga a quién llamar (apartado 6). */

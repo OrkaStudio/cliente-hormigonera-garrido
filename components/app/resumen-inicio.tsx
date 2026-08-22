@@ -329,16 +329,24 @@ export function ResumenInicio({
               Materiales
             </h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              {d.materiales.map((m) => (
-                <SemaforoStock
-                  key={m.nombre}
-                  material={m.nombre}
-                  restante={m.restante}
-                  capacidad={m.capacidad}
-                  unidad={m.unidad}
-                  diasRestantes={Math.floor(m.restante / m.consumoDiario)}
-                />
-              ))}
+              {/* El agua no entra: sale del pozo, se consume pero no hay
+                  existencia que se pueda quebrar. */}
+              {d.materiales
+                .flatMap((m) =>
+                  m.sinStock || m.restante === null || m.capacidad === null
+                    ? []
+                    : [{ ...m, restante: m.restante, capacidad: m.capacidad }],
+                )
+                .map((m) => (
+                  <SemaforoStock
+                    key={m.nombre}
+                    material={m.nombre}
+                    restante={m.restante}
+                    capacidad={m.capacidad}
+                    unidad={m.unidad}
+                    diasRestantes={Math.floor(m.restante / m.consumoDiario)}
+                  />
+                ))}
             </div>
           </section>
         </div>

@@ -227,6 +227,11 @@ export function derivarAlertas(
   }
 
   for (const m of materiales) {
+    // El agua sale del pozo: se consume, pero no hay existencia que se
+    // pueda quebrar. Avisar que "quedan 3 días de agua" sería inventar un
+    // problema que no existe.
+    if (m.sinStock || m.restante === null) continue;
+
     const dias = m.consumoDiario ? Math.floor(m.restante / m.consumoDiario) : Infinity;
     if (dias > UMBRALES.diasParaReponer) continue;
     alertas.push({
@@ -255,7 +260,10 @@ export function derivarAlertas(
         {
           clave: 'llenar',
           etiqueta: 'Para llenar el silo',
-          valor: `${(m.capacidad - m.restante).toLocaleString('es-AR')} ${m.unidad}`,
+          valor:
+            m.capacidad === null
+              ? '—'
+              : `${(m.capacidad - m.restante).toLocaleString('es-AR')} ${m.unidad}`,
         },
       ],
       pieDetalle:

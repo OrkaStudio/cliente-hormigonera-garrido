@@ -1,5 +1,6 @@
 import { derivarAlertas, estadoDePlanta } from '@/lib/dominio/alertas';
 import { CLIENTES, MATERIALES, generarCargas } from './semilla';
+import { consumoDiarioDe } from '@/lib/dominio/stock';
 import type { Carga } from './tipos';
 
 /**
@@ -57,13 +58,29 @@ export function derivarResumen(cargas: Carga[], rango: Rango, ahora: Date) {
   const corte = desde(rango, ahora);
   const enRango = cargas.filter((c) => new Date(c.momento) >= corte);
 
+  /**
+   * El consumo sale de las cargas, no de la constante de la semilla.
+   *
+   * Antes cada pantalla lo resolvía por su cuenta y el mismo silo decía
+   * "9 días" acá y "3 días" en Materiales. Ahora las dos leen del mismo
+   * helper, sobre la misma ventana de 30 días.
+   */
+  const desde30 = new Date(ahora);
+  desde30.setDate(desde30.getDate() - 30);
+  const ultimos30 = cargas.filter((c) => new Date(c.momento) >= desde30);
+
+  const materiales = MATERIALES.map((m) => {
+    const { porDia } = consumoDiarioDe(m.nombre, ultimos30);
+    return { ...m, consumoDiario: porDia || m.consumoDiario };
+  });
+
   return {
     ahora,
     rango,
     etiquetaRango: ETIQUETA[rango],
     planta: estadoDePlanta(cargas, ahora),
-    alertas: derivarAlertas(cargas, MATERIALES, ahora),
-    materiales: MATERIALES,
+    alertas: derivarAlertas(cargas, materiales, ahora),
+    materiales,
     cargas,
     hoy: {
       cargas: enRango.length,

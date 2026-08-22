@@ -94,11 +94,28 @@ export const CLIENTES: Cliente[] = [
   },
 ];
 
-export const RECETAS: Record<string, { m3PorCarga: number; precio: number; cemento: number; arena: number; piedra: number }> = {
-  'H-21': { m3PorCarga: 7, precio: 89000, cemento: 320, arena: 780, piedra: 1050 },
-  'H-25': { m3PorCarga: 6, precio: 94000, cemento: 340, arena: 760, piedra: 1040 },
-  'H-30': { m3PorCarga: 6, precio: 99000, cemento: 380, arena: 730, piedra: 1020 },
+/**
+ * Las recetas, con la dosificación por m³ que usa el PLC.
+ *
+ * Los valores salen del simulador (`simulador/planta.js`), que es el
+ * mejor modelo que tenemos del autómata hasta que llegue el mapa de
+ * GENROD. El aditivo va al 0,5% del cemento, como ahí.
+ *
+ * ⚠️ Los ÁRIDOS son uno solo. El PLC los pesa juntos y la app no puede
+ * inventar cuánto fue arena y cuánto piedra — separarlos depende de
+ * cuántas tolvas y balanzas haya, que es la pregunta 3.4 para GENROD.
+ */
+export const RECETAS: Record<
+  string,
+  { m3PorCarga: number; precio: number; cemento: number; agua: number; aridos: number }
+> = {
+  'H-21': { m3PorCarga: 7, precio: 89000, cemento: 284, agua: 160, aridos: 1930 },
+  'H-25': { m3PorCarga: 6, precio: 94000, cemento: 320, agua: 162, aridos: 1920 },
+  'H-30': { m3PorCarga: 6, precio: 99000, cemento: 350, agua: 165, aridos: 1900 },
 };
+
+/** El aditivo es proporcional al cemento, como en la planta. */
+export const ADITIVO_POR_CEMENTO = 0.005;
 
 /**
  * Los kilometros que suele haber hasta la obra de cada cliente.
@@ -257,16 +274,24 @@ export function generarCargas(ahora: Date): Carga[] {
             real: Math.round(r.cemento * r.m3PorCarga * (1 + deriva + ruido())),
           },
           {
-            material: 'Arena',
-            receta: r.arena * r.m3PorCarga,
-            objetivo: r.arena * r.m3PorCarga,
-            real: Math.round(r.arena * r.m3PorCarga * (1 + ruido())),
+            material: 'Áridos',
+            receta: r.aridos * r.m3PorCarga,
+            objetivo: r.aridos * r.m3PorCarga,
+            real: Math.round(r.aridos * r.m3PorCarga * (1 + ruido())),
           },
           {
-            material: 'Piedra',
-            receta: r.piedra * r.m3PorCarga,
-            objetivo: r.piedra * r.m3PorCarga,
-            real: Math.round(r.piedra * r.m3PorCarga * (1 + ruido())),
+            material: 'Agua',
+            receta: r.agua * r.m3PorCarga,
+            objetivo: r.agua * r.m3PorCarga,
+            real: Math.round(r.agua * r.m3PorCarga * (1 + ruido() * 3)),
+          },
+          {
+            material: 'Aditivo',
+            receta: Math.round(r.cemento * r.m3PorCarga * ADITIVO_POR_CEMENTO * 10) / 10,
+            objetivo: Math.round(r.cemento * r.m3PorCarga * ADITIVO_POR_CEMENTO * 10) / 10,
+            real:
+              Math.round(r.cemento * r.m3PorCarga * ADITIVO_POR_CEMENTO * (1 + ruido() * 5) * 10) /
+              10,
           },
         ],
       });
@@ -285,14 +310,16 @@ export function generarCargas(ahora: Date): Carga[] {
  * Mientras tanto, la pantalla dice de dónde viene el número.
  */
 export const COSTO_MATERIAL: Record<string, number> = {
-  // Calibrados para que el margen de materiales quede en 41–43% y el
-  // cemento pese 75–78% del costo, que es la proporción que reporta el
-  // rubro (70–80%). Con valores de mostrador —el cemento en bolsa ronda
+  // Calibrados para que el margen de materiales quede en 38–41% y el
+  // cemento pese cerca de dos tercios del costo, que es la proporción que
+  // reporta el rubro. Con valores de mostrador —el cemento en bolsa ronda
   // los $186/kg— el margen daba 6%, que no es el de ninguna planta: una
   // hormigonera compra a granel, no en la ferretería.
   Cemento: 120,
-  Arena: 6,
-  Piedra: 8,
+  Áridos: 7.15,
+  Aditivo: 3000,
+  // El agua sale del pozo: el costo es la bomba, y no mueve la aguja.
+  Agua: 0,
 };
 
 /** Lo que costaba un material hace `dia` días. */
@@ -304,27 +331,59 @@ export function costoMaterialEnDia(material: string, dia: number): number {
 export const MATERIALES: Material[] = [
   {
     nombre: 'Cemento',
-    restante: 12400,
+    // Calibrados contra el consumo REAL de la produccion sembrada (~42 m³
+    // por dia). Con los valores viejos —pensados para un consumo tres
+    // veces menor— todos los materiales daban "aguanta 1 dia" y la
+    // pantalla entera quedaba en rojo, que es la forma mas rapida de que
+    // nadie mire las alertas.
+    restante: 38200,
     capacidad: 50000,
     unidad: 'kg',
+    unidadCompra: 't',
+    factorConversion: 1000,
     consumoDiario: 4100,
+    medidoPorPlc: true,
     proveedor: { nombre: 'Cementos Avellaneda', telefono: '+54 9 2271 40-2211' },
   },
   {
-    nombre: 'Arena',
-    restante: 41000,
-    capacidad: 80000,
+    nombre: 'Áridos',
+    // Los áridos no van en silo: se acopian en pila, asi que la
+    // "capacidad" es la del playón.
+    restante: 462000,
+    capacidad: 600000,
     unidad: 'kg',
-    consumoDiario: 3600,
+    unidadCompra: 'm³',
+    // Un m³ de árido pesa alrededor de 1,6 t. Sin este factor el stock no
+    // cierra nunca: se compra por volumen y se pesa por kilo (R4).
+    factorConversion: 1600,
+    consumoDiario: 26000,
+    medidoPorPlc: true,
     proveedor: { nombre: 'Arenera del Salado', telefono: '+54 9 2241 33-7788' },
   },
   {
-    nombre: 'Piedra',
-    restante: 58000,
-    capacidad: 80000,
+    nombre: 'Aditivo',
+    restante: 780,
+    capacidad: 2000,
     unidad: 'kg',
-    consumoDiario: 3000,
-    proveedor: { nombre: 'Canteras Monte', telefono: '+54 9 2271 45-9010' },
+    unidadCompra: 'kg',
+    factorConversion: 1,
+    consumoDiario: 22,
+    medidoPorPlc: true,
+    proveedor: { nombre: 'Química del Centro', telefono: '+54 9 2241 15-40-3311' },
+  },
+  {
+    nombre: 'Agua',
+    restante: null,
+    capacidad: null,
+    unidad: 'L',
+    unidadCompra: 'L',
+    factorConversion: 1,
+    consumoDiario: 1400,
+    // Sale del pozo: no hay silo que se vacíe ni compra que cargar. El
+    // PLC la pesa igual, así que el consumo se conoce — lo que no existe
+    // es una existencia que se pueda quebrar.
+    medidoPorPlc: true,
+    sinStock: true,
   },
 ];
 
