@@ -100,7 +100,7 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
           <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           <span>
             <span className="text-ink font-medium">Margen de materiales:</span> lo facturado
-            menos cemento, arena y piedra. Sueldos y mixer se cargan abajo. Costos de
+            menos cemento, áridos, agua y aditivo. Sueldos y mixer se cargan abajo. Costos de
             material <span className="text-ink">sembrados</span> hasta que exista Compras.
           </span>
         </p>
