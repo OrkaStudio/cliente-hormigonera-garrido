@@ -23,16 +23,29 @@ export interface PuntoMes {
  * días parece una caída y no lo es — es el error de lectura más común en
  * cualquier tablero mensual.
  */
+/**
+ * Alto de las barras. "chico" no es una variante decorativa: es cómo se
+ * dice que un gráfico vale menos que el de al lado. Dos gráficos del
+ * mismo tamaño afirman que los dos importan igual.
+ */
+const ALTOS = {
+  normal: 'h-32 sm:h-44',
+  chico: 'h-24 sm:h-28',
+} as const;
+
 export function BarrasMes({
   datos,
   formato,
   serie = 's1',
+  alto = 'normal',
   className,
 }: {
   datos: PuntoMes[];
   formato: (n: number) => string;
   /** Qué color de la serie usa. Fijo por gráfico, nunca por barra. */
   serie?: 's1' | 's2' | 's3' | 's4';
+  /** Cuánto pesa este gráfico contra el de al lado. */
+  alto?: keyof typeof ALTOS;
   className?: string;
 }) {
   const [activo, setActivo] = useState<number | null>(null);
@@ -42,9 +55,9 @@ export function BarrasMes({
 
   return (
     <div className={cn('relative', className)}>
-      <div className="flex h-44 items-end gap-2">
+      <div className={cn('flex items-end gap-2', ALTOS[alto])}>
         {datos.map((d, i) => {
-          const alto = Math.max((d.valor / max) * 100, 1.5);
+          const altura = Math.max((d.valor / max) * 100, 1.5);
           const esActivo = activo === i;
           return (
             <button
@@ -63,7 +76,7 @@ export function BarrasMes({
                   activo !== null && !esActivo && 'opacity-40',
                 )}
                 style={{
-                  height: `${alto}%`,
+                  height: `${altura}%`,
                   background: d.parcial
                     ? `repeating-linear-gradient(45deg, var(--${serie}) 0 3px, transparent 3px 7px)`
                     : `var(--${serie})`,

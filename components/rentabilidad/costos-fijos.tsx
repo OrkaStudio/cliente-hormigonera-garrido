@@ -22,6 +22,12 @@ import { cn } from '@/lib/utils';
  * José, no por default. Mientras no cargue nada, la pantalla muestra
  * margen de materiales y punto — no un resultado inventado con sueldos
  * que nadie sabe cuánto son.
+ *
+ * El resultado queda a la vista y la carga se pliega. Es un formulario
+ * que José toca una vez por mes y una respuesta que mira todos los
+ * días: desplegar las dos cosas le daba a la carga el mismo peso que al
+ * número, y en el teléfono se comía un cuarto de pantalla sin decir
+ * nada.
  */
 export function CostosFijos({
   margenMateriales,
@@ -64,7 +70,46 @@ export function CostosFijos({
           materiales y nada más.
         </p>
       ) : (
-        <>
+        resultado && (
+          <div className="mt-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-muted-foreground text-sm">
+                Después de fijos
+                {proporcionDelMes < 1 && (
+                  <span className="text-faint">
+                    {' '}
+                    · {Math.round(proporcionDelMes * 100)}% del mes
+                  </span>
+                )}
+              </span>
+              <span
+                className={cn(
+                  'font-mono text-xl font-semibold tabular-nums',
+                  resultado.resultado >= 0 ? 'text-ok-text' : 'text-danger-text',
+                )}
+              >
+                {$(resultado.resultado)}
+              </span>
+            </div>
+            <p className="text-faint mt-1 text-xs">
+              {$(margenMateriales)} de margen de materiales menos {$(resultado.fijos)} de
+              fijos prorrateados.
+            </p>
+          </div>
+        )
+      )}
+
+      <details className="group mt-3">
+        <summary className="border-line text-muted-foreground hover:text-ink focus-visible:ring-ring/50 cursor-pointer list-none rounded border-t pt-3 text-sm marker:content-none focus-visible:ring-2 focus-visible:outline-none">
+          <span className="group-open:hidden">
+            {fijos.length === 0
+              ? 'Cargar un costo fijo'
+              : `Ver y editar los ${num(fijos.length)} cargados`}
+          </span>
+          <span className="hidden group-open:inline">Cerrar la carga</span>
+        </summary>
+
+        {fijos.length > 0 && (
           <ul className="divide-line mt-2 divide-y">
             {fijos.map((f) => (
               <li key={f.id} className="flex items-center gap-2 py-1.5">
@@ -82,68 +127,40 @@ export function CostosFijos({
               </li>
             ))}
           </ul>
+        )}
 
-          {resultado && (
-            <div className="border-line mt-3 border-t pt-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="text-muted-foreground text-sm">
-                  Después de fijos
-                  {proporcionDelMes < 1 && (
-                    <span className="text-faint">
-                      {' '}
-                      · {Math.round(proporcionDelMes * 100)}% del mes
-                    </span>
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    'font-mono text-xl font-semibold tabular-nums',
-                    resultado.resultado >= 0 ? 'text-ok-text' : 'text-danger-text',
-                  )}
-                >
-                  {$(resultado.resultado)}
-                </span>
-              </div>
-              <p className="text-faint mt-1 text-xs">
-                {$(margenMateriales)} de margen de materiales menos {$(resultado.fijos)} de
-                fijos prorrateados.
-              </p>
-            </div>
-          )}
-        </>
-      )}
-
-      <div className="border-line mt-3 flex flex-wrap items-end gap-2 border-t pt-3">
-        <div className="min-w-[9rem] flex-1">
-          <Label htmlFor="cf-nombre" className="text-faint text-xs">
-            Concepto
-          </Label>
-          <Input
-            id="cf-nombre"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder="Sueldos"
-            className="mt-1"
-          />
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <div className="min-w-[9rem] flex-1">
+            <Label htmlFor="cf-nombre" className="text-faint text-xs">
+              Concepto
+            </Label>
+            <Input
+              id="cf-nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Sueldos"
+              className="mt-1"
+            />
+          </div>
+          <div className="w-32">
+            <Label htmlFor="cf-monto" className="text-faint text-xs">
+              Por mes
+            </Label>
+            <Input
+              id="cf-monto"
+              value={monto ? num(Number(monto)) : ''}
+              onChange={(e) => setMonto(e.target.value.replace(/\D/g, ''))}
+              inputMode="numeric"
+              placeholder="0"
+              className="mt-1 text-right font-mono tabular-nums"
+            />
+          </div>
+          <Button variant="outline" onClick={agregar} disabled={!valido}>
+            <Plus data-icon="inline-start" />
+            Agregar
+          </Button>
         </div>
-        <div className="w-32">
-          <Label htmlFor="cf-monto" className="text-faint text-xs">
-            Por mes
-          </Label>
-          <Input
-            id="cf-monto"
-            value={monto ? num(Number(monto)) : ''}
-            onChange={(e) => setMonto(e.target.value.replace(/\D/g, ''))}
-            inputMode="numeric"
-            placeholder="0"
-            className="mt-1 text-right font-mono tabular-nums"
-          />
-        </div>
-        <Button variant="outline" onClick={agregar} disabled={!valido}>
-          <Plus data-icon="inline-start" />
-          Agregar
-        </Button>
-      </div>
+      </details>
     </section>
   );
 }
