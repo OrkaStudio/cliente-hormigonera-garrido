@@ -106,6 +106,89 @@ export function ordenarPorActividad(clientes: ClienteConResumen[]): ClienteConRe
 }
 
 /**
+ * Cuántos días hace que este cliente no compra.
+ *
+ * La pregunta de José no es "¿qué día compró?", es "¿hace cuánto que no
+ * lo veo?". Una fecha obliga a restar contra el calendario; los días ya
+ * son la respuesta. Devuelve null si nunca compró — que no es lo mismo
+ * que hace mucho.
+ */
+export function diasSinComprar(ultimaCompra: string | null, ahora = new Date()): number | null {
+  if (!ultimaCompra) return null;
+  const dia = 24 * 60 * 60 * 1000;
+  // Contra el arranque de cada día, no contra la hora: si no, una compra
+  // de anoche da "0 días" y una de esta mañana también, pero una de ayer
+  // a la tarde da 0 y una de ayer a la mañana da 1.
+  const aMedianoche = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.max(
+    0,
+    Math.round((aMedianoche(ahora) - aMedianoche(new Date(ultimaCompra))) / dia),
+  );
+}
+
+/**
+ * Los umbrales del enfriamiento, en días.
+ *
+ * Existen para que el color signifique algo. Pintar de ámbar una compra
+ * de hace tres días y de verde una de hace cinco inventa una alarma
+ * donde no hay ninguna: los dos clientes están comprando. El color
+ * aparece recién cuando alguien de verdad se está yendo.
+ */
+export const ENFRIAMIENTO = { tibio: 21, frio: 45 } as const;
+
+export type Temperatura = 'fresco' | 'tibio' | 'frio';
+
+export function temperatura(dias: number | null): Temperatura | null {
+  if (dias === null) return null;
+  if (dias >= ENFRIAMIENTO.frio) return 'frio';
+  if (dias >= ENFRIAMIENTO.tibio) return 'tibio';
+  return 'fresco';
+}
+
+/**
+ * Qué porción de la planta es este cliente.
+ *
+ * No es lo mismo que compararlo contra el más grande. "Casi tanto como
+ * el primero" no sirve para decidir nada; "el 19% de lo que sale de la
+ * planta" dice cuánto se depende de él. Devuelve 0 si todavía no salió
+ * nada, en vez de dividir por cero.
+ */
+export function participacion(m3: number, totalM3: number): number {
+  if (totalM3 <= 0) return 0;
+  return (m3 / totalM3) * 100;
+}
+
+/** Por qué se ordena el ranking. */
+export type Criterio = 'volumen' | 'facturado';
+
+/**
+ * El ranking.
+ *
+ * Los dos criterios NO dan el mismo orden y esa es la razón de que se
+ * pueda cambiar: un cliente que compra recetas caras factura más
+ * llevando menos metros. Con la semilla de hoy, Corralón lleva un m³
+ * menos que Constructora y deja casi trescientos mil pesos más.
+ *
+ * El genérico —la venta suelta— queda AFUERA. No es un cliente: es la
+ * suma de todos los que no justificaron darlos de alta. Si un día
+ * encabeza la lista, "mi cliente más importante" deja de significar
+ * algo.
+ */
+export function ordenarRanking(
+  clientes: ClienteConResumen[],
+  criterio: Criterio,
+): { ranking: ClienteConResumen[]; genericos: ClienteConResumen[] } {
+  const valor = (c: ClienteConResumen) =>
+    criterio === 'volumen' ? c.resumen.m3 : c.resumen.facturado;
+
+  const ranking = clientes
+    .filter((c) => !c.generico)
+    .sort((a, b) => valor(b) - valor(a) || a.nombre.localeCompare(b.nombre, 'es'));
+
+  return { ranking, genericos: clientes.filter((c) => c.generico) };
+}
+
+/**
  * El buscador. Compara sin acentos y sin distinguir mayúsculas, porque
  * nadie va a tipear "Corralón" con tilde para encontrar el corralón.
  */

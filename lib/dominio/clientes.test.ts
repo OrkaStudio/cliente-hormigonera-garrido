@@ -3,9 +3,13 @@ import { describe, expect, it } from 'vitest';
 import type { Carga, Cliente } from '@/lib/datos/tipos';
 import {
   coincide,
+  diasSinComprar,
   ordenarPorActividad,
+  ordenarRanking,
+  participacion,
   porcentajeEnBlanco,
   resumenDeCliente,
+  temperatura,
   type ClienteConResumen,
 } from './clientes';
 
@@ -236,5 +240,123 @@ describe('coincide', () => {
 
   it('no inventa coincidencias', () => {
     expect(coincide(corralon, 'riquelme')).toBe(false);
+  });
+});
+
+function conResumen(
+  id: string,
+  nombre: string,
+  m3: number,
+  facturado: number,
+  generico = false,
+): ClienteConResumen {
+  return {
+    ...cliente({ id, nombre, generico }),
+    resumen: {
+      ventas: 1,
+      m3,
+      facturado,
+      ultimaCompra: '2026-08-20T10:00:00.000Z',
+      recetaFrecuente: 'H-21',
+      blanco: 0,
+      negro: 0,
+      definidas: 0,
+    },
+  };
+}
+
+describe('diasSinComprar', () => {
+  it('cuenta contra el arranque del día, no contra la hora', () => {
+    // Compró anoche tarde y se lo mira temprano: sigue siendo ayer.
+    const dias = diasSinComprar(
+      '2026-08-23T23:00:00.000Z',
+      new Date('2026-08-24T07:00:00.000Z'),
+    );
+    expect(dias).toBe(1);
+  });
+
+  it('el mismo día da cero', () => {
+    expect(
+      diasSinComprar('2026-08-24T08:00:00.000Z', new Date('2026-08-24T20:00:00.000Z')),
+    ).toBe(0);
+  });
+
+  it('nunca compró no es lo mismo que hace mucho', () => {
+    expect(diasSinComprar(null)).toBeNull();
+  });
+
+  it('no devuelve negativos si el reloj viene corrido', () => {
+    expect(
+      diasSinComprar('2026-08-25T10:00:00.000Z', new Date('2026-08-24T10:00:00.000Z')),
+    ).toBe(0);
+  });
+});
+
+describe('temperatura', () => {
+  it('una compra de esta semana no enciende ningún color', () => {
+    expect(temperatura(0)).toBe('fresco');
+    expect(temperatura(5)).toBe('fresco');
+    expect(temperatura(20)).toBe('fresco');
+  });
+
+  it('a las tres semanas empieza a llamar la atención', () => {
+    expect(temperatura(21)).toBe('tibio');
+    expect(temperatura(44)).toBe('tibio');
+  });
+
+  it('a los cuarenta y cinco días es una alarma', () => {
+    expect(temperatura(45)).toBe('frio');
+    expect(temperatura(200)).toBe('frio');
+  });
+
+  it('sin compras no hay temperatura', () => {
+    expect(temperatura(null)).toBeNull();
+  });
+});
+
+describe('participacion', () => {
+  it('mide contra el total de la planta, no contra el más grande', () => {
+    expect(Math.round(participacion(706, 3772))).toBe(19);
+  });
+
+  it('sin producción no divide por cero', () => {
+    expect(participacion(0, 0)).toBe(0);
+  });
+});
+
+describe('ordenarRanking', () => {
+  const todos = [
+    conResumen('CL-01', 'Constructora del Este SRL', 606, 52_662_905),
+    conResumen('CL-02', 'Corralón El Ladrillo', 605, 52_960_737),
+    conResumen('CL-03', 'Obras Monte SA', 706, 61_236_771),
+    conResumen('CL-99', 'Mostrador', 592, 51_326_264, true),
+  ];
+
+  it('los dos criterios NO dan el mismo orden', () => {
+    // Corralón lleva un m³ menos que Constructora y factura más: compra
+    // recetas más caras. Si el orden fuera uno solo, eso no se ve.
+    const porVolumen = ordenarRanking(todos, 'volumen').ranking.map((c) => c.id);
+    const porFacturado = ordenarRanking(todos, 'facturado').ranking.map((c) => c.id);
+
+    expect(porVolumen).toEqual(['CL-03', 'CL-01', 'CL-02']);
+    expect(porFacturado).toEqual(['CL-03', 'CL-02', 'CL-01']);
+  });
+
+  it('la venta suelta queda afuera del ranking', () => {
+    const { ranking, genericos } = ordenarRanking(todos, 'volumen');
+
+    expect(ranking.some((c) => c.generico)).toBe(false);
+    expect(genericos.map((c) => c.nombre)).toEqual(['Mostrador']);
+  });
+
+  it('empate de números se rompe por nombre, no por orden de llegada', () => {
+    const empatados = [
+      conResumen('CL-B', 'Zeta SA', 100, 100),
+      conResumen('CL-A', 'Alfa SA', 100, 100),
+    ];
+    expect(ordenarRanking(empatados, 'volumen').ranking.map((c) => c.nombre)).toEqual([
+      'Alfa SA',
+      'Zeta SA',
+    ]);
   });
 });
