@@ -14,6 +14,21 @@ import {
 import { num } from '@/lib/formato';
 
 /**
+ * NO ESTÁ EN NINGUNA PANTALLA, Y ES A PROPÓSITO.
+ *
+ * Salió de Cargas el 24/08. El motivo es de producto, no del
+ * componente: José vive a 180 km y entra a mirar cuando puede, así que
+ * la probabilidad de que esté conectado justo en el minuto en que el
+ * autómata dosifica es mínima. Un panel que casi siempre está quieto
+ * ocupaba la mejor parte de la pantalla para no decir nada.
+ *
+ * Se conserva porque es el único lugar donde está modelado el ciclo del
+ * PLC tal como lo lee Node-RED —el registro 20 como estado, la
+ * transición de automático a parado como disparador— y eso costó
+ * conseguirlo. Si algún día hay un modo cabina o una pantalla de planta,
+ * empieza acá.
+ *
+
  * La planta, mientras trabaja.
  *
  * Es la pantalla que José no tiene hoy: para saber si la planta está

@@ -1,4 +1,4 @@
-import { CLIENTES, generarCargas } from './semilla';
+import { CLIENTES, RECETAS, generarCargas } from './semilla';
 import type { Carga } from './tipos';
 
 /**
@@ -28,6 +28,8 @@ export async function traerCargas(ahora = new Date()) {
       nombre: c.nombre,
       generico: c.generico ?? false,
     })),
+    /** En qué orden se le asigna color a cada receta. Fijo, nunca cíclico. */
+    recetas: Object.keys(RECETAS),
     /** Las últimas del historial, para ver más atrás sin salir. */
     recientes: [...todas.filter((c) => new Date(c.momento).toDateString() !== hoy)]
       .reverse()
