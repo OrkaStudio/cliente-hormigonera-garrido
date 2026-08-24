@@ -116,7 +116,7 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
         {/* El número que manda. Uno solo, en dos unidades: la plata que
             quedó y qué proporción de la venta es. Todo lo que viene
             después existe para explicar este par. */}
-        <section className="border-line bg-panel shadow-tarjeta mt-4 rounded-xl border p-4 sm:p-6">
+        <section className="border-line bg-panel shadow-tarjeta mt-4 rounded-xl border p-4">
           <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
             Margen de materiales {etiquetaPeriodo}
           </h2>
@@ -200,7 +200,7 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
         {/* Los tres que acompañan. Sin tarjeta a propósito: con caja
             propia volvían a pesar lo mismo que el margen, que era el
             problema de esta pantalla. */}
-        <section className="mt-6 grid gap-4 sm:grid-cols-3 sm:gap-6">
+        <section className="border-line bg-panel shadow-tarjeta mt-6 grid divide-y divide-dashed rounded-xl border p-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <Kpi
             rotulo={`Facturado ${etiquetaPeriodo}`}
             valor={$(d.actual.facturado)}
@@ -238,7 +238,7 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
               Gasoil por mes
             </h2>
             <div className="mt-4">
-              <BarrasMes datos={serieGasoil} formato={$$} serie="neutro" alto="chico" />
+              <BarrasMes datos={serieGasoil} formato={$$} serie="s2" alto="chico" />
             </div>
           </section>
         </div>
@@ -267,7 +267,7 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
                       </span>
                     </div>
                     <div className="bg-sunk mt-1 h-1.5 overflow-hidden rounded-full">
-                      <div className="bg-faint h-full rounded-full" style={{ width: `${ancho}%` }} />
+                      <div className="bg-s3 h-full rounded-full" style={{ width: `${ancho}%` }} />
                     </div>
                   </li>
                 );
@@ -412,8 +412,9 @@ function Kpi({
   return (
     // En el teléfono es una fila —rótulo a la izquierda, número a la
     // derecha— y en escritorio una columna. Cinco tarjetas apiladas eran
-    // seiscientos píxeles de scroll para datos de apoyo.
-    <div className="border-line grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 border-t-2 pt-3 sm:grid-cols-1">
+    // seiscientos píxeles de scroll para datos de apoyo; ahora los tres
+    // comparten un solo card y se separan con una línea.
+    <div className="border-line grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-1 sm:px-5 sm:py-0 sm:first:pl-0 sm:last:pr-0">
       <p className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">{rotulo}</p>
       <p className="col-start-2 text-right font-mono text-lg font-semibold tabular-nums sm:col-start-1 sm:mt-1.5 sm:text-left sm:text-xl">
         {valor}
