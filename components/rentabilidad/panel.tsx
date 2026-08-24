@@ -223,7 +223,7 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
 
         {/* La venta y un gasto lateral no pesan lo mismo, así que no se
             dibujan del mismo tamaño. Eran dos gráficos gemelos. */}
-        <div className="mt-8 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+        <div className="mt-8 grid items-start gap-6 xl:grid-cols-[1.6fr_1fr]">
           <section className="border-line bg-panel shadow-tarjeta rounded-xl border p-4">
             <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
               Facturado por mes
@@ -238,12 +238,12 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
               Gasoil por mes
             </h2>
             <div className="mt-4">
-              <BarrasMes datos={serieGasoil} formato={$$} serie="s2" alto="chico" />
+              <BarrasMes datos={serieGasoil} formato={$$} serie="neutro" alto="chico" />
             </div>
           </section>
         </div>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+        <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1.3fr_1fr]">
           <section className="border-line bg-panel shadow-tarjeta rounded-xl border p-4">
             <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
               Margen por m³ · receta
@@ -267,7 +267,7 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
                       </span>
                     </div>
                     <div className="bg-sunk mt-1 h-1.5 overflow-hidden rounded-full">
-                      <div className="bg-s3 h-full rounded-full" style={{ width: `${ancho}%` }} />
+                      <div className="bg-faint h-full rounded-full" style={{ width: `${ancho}%` }} />
                     </div>
                   </li>
                 );
@@ -413,7 +413,7 @@ function Kpi({
     // En el teléfono es una fila —rótulo a la izquierda, número a la
     // derecha— y en escritorio una columna. Cinco tarjetas apiladas eran
     // seiscientos píxeles de scroll para datos de apoyo.
-    <div className="border-line grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 border-l-2 pl-3 sm:grid-cols-1 sm:pl-4">
+    <div className="border-line grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 border-t-2 pt-3 sm:grid-cols-1">
       <p className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">{rotulo}</p>
       <p className="col-start-2 text-right font-mono text-lg font-semibold tabular-nums sm:col-start-1 sm:mt-1.5 sm:text-left sm:text-xl">
         {valor}

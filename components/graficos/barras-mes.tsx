@@ -30,7 +30,23 @@ export interface PuntoMes {
  */
 const ALTOS = {
   normal: 'h-32 sm:h-44',
-  chico: 'h-24 sm:h-28',
+  chico: 'h-28 sm:h-32',
+} as const;
+
+/**
+ * De dónde sale el color de las barras.
+ *
+ * La serie s1..s4 existe para distinguir categorías, y un gráfico de una
+ * sola serie no distingue nada: si el gasoil se queda el ámbar, ese
+ * ámbar ya no puede significar "áridos" dos bloques más abajo. El que no
+ * clasifica va en grafito, que además es como se ve que pesa menos.
+ */
+const TINTAS = {
+  s1: 'var(--s1)',
+  s2: 'var(--s2)',
+  s3: 'var(--s3)',
+  s4: 'var(--s4)',
+  neutro: 'var(--faint)',
 } as const;
 
 export function BarrasMes({
@@ -42,8 +58,8 @@ export function BarrasMes({
 }: {
   datos: PuntoMes[];
   formato: (n: number) => string;
-  /** Qué color de la serie usa. Fijo por gráfico, nunca por barra. */
-  serie?: 's1' | 's2' | 's3' | 's4';
+  /** Qué color usa. Fijo por gráfico, nunca por barra. */
+  serie?: keyof typeof TINTAS;
   /** Cuánto pesa este gráfico contra el de al lado. */
   alto?: keyof typeof ALTOS;
   className?: string;
@@ -78,8 +94,8 @@ export function BarrasMes({
                 style={{
                   height: `${altura}%`,
                   background: d.parcial
-                    ? `repeating-linear-gradient(45deg, var(--${serie}) 0 3px, transparent 3px 7px)`
-                    : `var(--${serie})`,
+                    ? `repeating-linear-gradient(45deg, ${TINTAS[serie]} 0 3px, transparent 3px 7px)`
+                    : TINTAS[serie],
                 }}
               />
             </button>
