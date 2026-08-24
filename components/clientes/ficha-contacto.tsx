@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, IdCard, Mail, MapPin, MessageCircle, Phone, User } from 'lucide-react';
+import { Building2, IdCard, Mail, MessageCircle, Phone, User } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { telefonoParaWhatsapp } from '@/lib/dominio/whatsapp';
@@ -22,12 +22,15 @@ function Fila({
   valor,
   mono = false,
   href,
+  nota,
 }: {
   icono: typeof Phone;
   rotulo: string;
   valor: string | null;
   mono?: boolean;
   href?: string | null;
+  /** La aclaración que cuelga del dato, no de la tarjeta. */
+  nota?: string;
 }) {
   const contenido = (
     <>
@@ -47,6 +50,7 @@ function Fila({
         >
           {valor ?? 'sin cargar'}
         </span>
+        {nota && <span className="text-faint mt-1 block text-xs italic">{nota}</span>}
       </span>
     </>
   );
@@ -57,14 +61,14 @@ function Fila({
         href={href}
         target={href.startsWith('http') ? '_blank' : undefined}
         rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
-        className="hover:bg-sunk -mx-2 flex items-start gap-2.5 rounded-md px-2 py-1.5 transition-colors"
+        className="hover:bg-sunk -mx-2 flex items-start gap-2.5 rounded-md px-2 py-2.5 transition-colors"
       >
         {contenido}
       </a>
     );
   }
 
-  return <div className="-mx-2 flex items-start gap-2.5 px-2 py-1.5">{contenido}</div>;
+  return <div className="-mx-2 flex items-start gap-2.5 px-2 py-2.5">{contenido}</div>;
 }
 
 export interface FichaContactoProps {
@@ -107,52 +111,45 @@ export function FichaContacto({
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="border-line bg-card shadow-tarjeta rounded-lg border p-4">
-        <h3 className="rotulo-obra text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
-          Contacto
-        </h3>
+    <div className="border-line bg-card shadow-tarjeta flex flex-col gap-4 rounded-lg border p-4">
+      <h3 className="rotulo-obra text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
+        Contacto oficial
+      </h3>
 
-        <div className="mt-2 grid">
-          <Fila icono={User} rotulo="Con quién se habla" valor={contacto} />
-          <Fila
-            icono={wsp ? MessageCircle : Phone}
-            rotulo={wsp ? 'Teléfono · WhatsApp' : 'Teléfono'}
-            valor={telefono}
-            mono
-            href={wsp ? `https://wa.me/${wsp}` : null}
-          />
-          <Fila icono={Mail} rotulo="Mail" valor={mail} href={mail ? `mailto:${mail}` : null} />
-        </div>
-
-        {vacio && onEditar && (
-          <Button variant="outline" size="sm" className="mt-3 w-full" onClick={onEditar}>
-            Cargar los datos
-          </Button>
-        )}
+      {/* Un solo bloque, separado por líneas. Eran dos tarjetas —"Contacto"
+          y "Para los papeles"— y con la columna angosta quedaban dos cajas
+          flacas una arriba de la otra diciendo lo mismo: quién es este
+          cliente. */}
+      <div className="divide-line grid divide-y">
+        <Fila icono={User} rotulo="Contacto principal" valor={contacto} />
+        <Fila
+          icono={wsp ? MessageCircle : Phone}
+          rotulo={wsp ? 'Teléfono · WhatsApp' : 'Teléfono'}
+          valor={telefono}
+          mono
+          href={wsp ? `https://wa.me/${wsp}` : null}
+        />
+        <Fila icono={Mail} rotulo="Mail" valor={mail} href={mail ? `mailto:${mail}` : null} />
+        <Fila
+          icono={Building2}
+          rotulo="Domicilio fiscal"
+          valor={direccion}
+          nota="El lugar de entrega se carga en cada remito: casi nunca es este domicilio."
+        />
+        <Fila icono={IdCard} rotulo="CUIT" valor={cuit} mono />
       </div>
 
-      <div className="border-line bg-card shadow-tarjeta rounded-lg border p-4">
-        <h3 className="rotulo-obra text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
-          Para los papeles
-        </h3>
-
-        <div className="mt-2 grid">
-          <Fila icono={IdCard} rotulo="CUIT" valor={cuit} mono />
-          <Fila icono={Building2} rotulo="Domicilio fiscal" valor={direccion} />
-        </div>
-
-        <p className="text-faint mt-2 flex items-start gap-1.5 text-xs">
-          <MapPin className="mt-0.5 size-3 shrink-0" aria-hidden />
-          El lugar de entrega se carga en cada remito: casi nunca es este domicilio.
-        </p>
-      </div>
+      {vacio && onEditar && (
+        <Button variant="outline" size="sm" onClick={onEditar}>
+          Cargar los datos
+        </Button>
+      )}
 
       {notas && (
-        <div className="border-line bg-sunk rounded-lg border border-dashed p-4">
-          <h3 className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
+        <div className="border-line bg-sunk rounded-md border border-dashed p-3">
+          <h4 className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
             Notas
-          </h3>
+          </h4>
           <p className="text-ink-soft mt-1.5 text-sm whitespace-pre-line">{notas}</p>
         </div>
       )}
