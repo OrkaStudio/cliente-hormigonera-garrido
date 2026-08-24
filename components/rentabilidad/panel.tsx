@@ -104,7 +104,7 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
             Es la única bajada del título. Antes había dos, y la de arriba
             explicaba lo mismo noventa píxeles más arriba: contra qué se
             compara ahora vive pegado al número que compara. */}
-        <p className="border-line bg-sunk text-muted-foreground mt-3 flex items-start gap-2 rounded-lg border border-dashed px-3 py-2 text-xs">
+        <p className="border-line bg-sunk text-muted-foreground mt-3 flex items-start gap-2 rounded-lg border border-dashed px-4 py-2.5 text-xs">
           <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           <span>
             <span className="text-ink font-medium">Margen de materiales:</span> lo facturado
@@ -167,7 +167,7 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
             cosa: los dos porcentajes van neutros y quién le gana a quién
             lo dice el título. */}
         {d.carrera && (
-          <section className="bg-ink text-primary-foreground mt-4 flex items-start gap-4 rounded-xl p-5 sm:gap-5 sm:p-6">
+          <section className="bg-ink text-primary-foreground mt-4 flex items-start gap-4 rounded-xl p-4 sm:gap-5">
             {d.carrera.gana ? (
               <TrendingUp className="text-ok mt-0.5 size-6 shrink-0" aria-hidden />
             ) : (
@@ -223,7 +223,7 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
 
         {/* La venta y un gasto lateral no pesan lo mismo, así que no se
             dibujan del mismo tamaño. Eran dos gráficos gemelos. */}
-        <div className="mt-8 grid items-start gap-6 xl:grid-cols-[1.6fr_1fr]">
+        <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
           <section className="border-line bg-panel shadow-tarjeta rounded-xl border p-4">
             <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
               Facturado por mes
@@ -243,7 +243,7 @@ export function PanelRentabilidad({ datos: d }: { datos: DatosRentabilidad }) {
           </section>
         </div>
 
-        <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1.3fr_1fr]">
+        <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
           <section className="border-line bg-panel shadow-tarjeta rounded-xl border p-4">
             <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
               Margen por m³ · receta
