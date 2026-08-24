@@ -13,10 +13,27 @@ import { TarjetaKpi } from '@/components/dominio/tarjeta-kpi';
 import { Button } from '@/components/ui/button';
 import { buscarLocal, editarLocal, parcheLocal } from '@/lib/datos/locales';
 import type { PerfilCliente as Perfil } from '@/lib/datos/clientes';
-import { porcentajeEnBlanco } from '@/lib/dominio/clientes';
+import { diasSinComprar, porcentajeEnBlanco } from '@/lib/dominio/clientes';
 import { $, dec, fechaDeMomento, fechaLargaDeMomento, hora, num } from '@/lib/formato';
 import { DialogoBaja } from './dialogo-baja';
 import { DialogoCliente, type DatosCliente } from './dialogo-cliente';
+/**
+ * Cuántas cargas se ven sin desplegar.
+ *
+ * El historial completo son noventa y nueve ventas listadas de corrido:
+ * nueve mil doscientos píxeles en el teléfono, once pantallas, para un
+ * bloque que José mira cuando el cliente llama por UNA entrega puntual.
+ * Las últimas cinco contestan "¿qué me compró últimamente?" y el resto
+ * está a un clic.
+ */
+const A_LA_VISTA = 5;
+
+/** "hoy", "ayer", "hace 12 días". La misma voz que la lista. */
+function textoDeDias(dias: number | null): string {
+  if (dias === null) return 'sin compras';
+  return dias === 0 ? 'hoy' : dias === 1 ? 'ayer' : `hace ${dias} días`;
+}
+
 /**
  * El perfil de un cliente.
  *
@@ -37,6 +54,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
   const [montado, setMontado] = useState(false);
   const [editando, setEditando] = useState(false);
   const [dandoBaja, setDandoBaja] = useState(false);
+  const [todas, setTodas] = useState(false);
   function refrescar() {
     if (perfil) {
       setDatos({ ...perfil, ...parcheLocal(id) });
@@ -157,7 +175,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
           valor={num(resumen.ventas)}
           pie={
             resumen.ultimaCompra
-              ? `La última, el ${fechaLargaDeMomento(resumen.ultimaCompra)}`
+              ? `La última, ${textoDeDias(diasSinComprar(resumen.ultimaCompra))} · ${fechaLargaDeMomento(resumen.ultimaCompra)}`
               : 'Sin cargas asignadas'
           }
         />
@@ -167,21 +185,32 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
           pie="Suma de las cargas que tiene asignadas"
         />
       </div>
+      {/* En el teléfono el contacto va PRIMERO. Antes vivía al final de
+          la columna, o sea después de noventa y nueve cargas: para
+          llamar al cliente había que recorrer nueve mil píxeles. */}
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_20rem]">
-        <section className="min-w-0">
-          <h2 className="rotulo-obra text-muted-foreground font-mono text-xs tracking-widest uppercase">
+        <section className="order-2 min-w-0 lg:order-1">
+          <div className="border-line bg-card shadow-tarjeta overflow-hidden rounded-lg border">
+          <div className="px-4 pt-4">
+          <h2 className="rotulo-obra text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
             Sus cargas
+            {datos.ventas.length > A_LA_VISTA && (
+              <span className="text-faint normal-case">
+                · {todas ? `las ${num(datos.ventas.length)}` : `últimas ${A_LA_VISTA} de ${num(datos.ventas.length)}`}
+              </span>
+            )}
           </h2>
+          </div>
           {datos.ventas.length === 0 ? (
             <EstadoVacio
-              className="mt-3"
+              className="m-4 mt-3"
               titulo="Todavía no tiene cargas asignadas"
               descripcion="Cuando exista el apartado de Cargas, las que se le asignen van a aparecer acá y los números de arriba se van a mover solos."
             />
           ) : (
-            <ul className="border-line bg-panel mt-3 divide-y divide-[var(--line)] overflow-hidden rounded-xl border">
-              {datos.ventas.map((v) => (
-                <li key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3.5">
+            <ul className="border-line mt-3 divide-y divide-[var(--line)] border-t">
+              {(todas ? datos.ventas : datos.ventas.slice(0, A_LA_VISTA)).map((v) => (
+                <li key={v.id} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 p-3.5 sm:gap-x-3">
                   <span className="text-muted-foreground w-11 font-mono text-sm tabular-nums">
                     {fechaDeMomento(v.momento)}
                   </span>
@@ -193,7 +222,7 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
                   <span className="ml-auto text-sm tabular-nums whitespace-nowrap">
                     {v.total ? $(v.total) : <span className="text-faint">—</span>}
                   </span>
-                  <span className="w-16 text-right">
+                  <span className="hidden w-16 text-right sm:inline">
                     <MarcaFiscalDeVenta venta={v} />
                   </span>
                   {/* Un remito por carga. Sale de acá y no de una pantalla
@@ -215,13 +244,27 @@ export function PerfilCliente({ perfil, id }: { perfil: Perfil | null; id: strin
                   </Button>
                 </li>
               ))}
+              {datos.ventas.length > A_LA_VISTA && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setTodas((v) => !v)}
+                    className="text-muted-foreground hover:text-ink hover:bg-sunk focus-visible:ring-ring/50 w-full px-3.5 py-2.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:-outline-offset-2"
+                  >
+                    {todas
+                      ? `Mostrar sólo las últimas ${A_LA_VISTA}`
+                      : `Mostrar las ${num(datos.ventas.length - A_LA_VISTA)} restantes`}
+                  </button>
+                </li>
+              )}
             </ul>
           )}
+          </div>
           <div className="mt-6">
             <DocumentosDelCliente clienteId={id} />
           </div>
         </section>
-        <aside className="grid min-w-0 content-start gap-4">
+        <aside className="order-1 grid min-w-0 content-start gap-4 lg:order-2">
           <FichaContacto
             contacto={datos.contacto}
             telefono={datos.telefono}

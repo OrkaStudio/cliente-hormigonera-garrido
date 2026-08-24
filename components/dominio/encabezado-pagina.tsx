@@ -24,7 +24,9 @@ export function EncabezadoPagina({
         </h1>
         {bajada ? <div className="text-faint mt-1 text-sm">{bajada}</div> : null}
       </div>
-      {acciones ? <div className="flex items-center gap-2">{acciones}</div> : null}
+      {acciones ? (
+        <div className="flex flex-wrap items-center gap-2">{acciones}</div>
+      ) : null}
     </header>
   );
 }
