@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, UserMinus, UserCheck } from 'lucide-react';
+import { ArrowDown, Plus, Pencil, Store, UserMinus, UserCheck } from 'lucide-react';
 
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import { Estado } from '@/components/dominio/estado';
@@ -18,10 +18,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { type ClienteConResumen, coincide, ordenarPorActividad } from '@/lib/dominio/clientes';
+import {
+  type ClienteConResumen,
+  type Criterio,
+  coincide,
+  diasSinComprar,
+  ordenarPorActividad,
+  ordenarRanking,
+  participacion,
+  temperatura,
+} from '@/lib/dominio/clientes';
 import { altaLocal, aplicarLocales, editarLocal } from '@/lib/datos/locales';
 import type { Cliente } from '@/lib/datos/tipos';
-import { $, dec, fechaDeMomento } from '@/lib/formato';
+import { cn } from '@/lib/utils';
+import { $, dec, fechaLargaDeMomento } from '@/lib/formato';
 import { DialogoCliente, type DatosCliente } from './dialogo-cliente';
 import { DialogoBaja } from './dialogo-baja';
 
@@ -39,12 +49,20 @@ import { DialogoBaja } from './dialogo-baja';
  * calculan de las cargas. Un acumulado guardado se desincroniza el día
  * que alguien anula una carga vieja, y nadie se entera.
  */
-export function ListaClientes({ sembrados }: { sembrados: ClienteConResumen[] }) {
+export function ListaClientes({
+  sembrados,
+  totalM3,
+}: {
+  sembrados: ClienteConResumen[];
+  /** Los m³ de toda la planta: el denominador de la participación. */
+  totalM3: number;
+}) {
   // El primer render tiene que dar igual que el del servidor, así que los
   // cambios guardados en el navegador se aplican después de montar.
   const [clientes, setClientes] = useState(sembrados);
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState('activos');
+  const [criterio, setCriterio] = useState<Criterio>('volumen');
 
   const [editando, setEditando] = useState<Cliente | null>(null);
   const [abriendoAlta, setAbriendoAlta] = useState(false);
@@ -59,10 +77,12 @@ export function ListaClientes({ sembrados }: { sembrados: ClienteConResumen[] })
   const activos = clientes.filter((c) => c.activo);
   const inactivos = clientes.filter((c) => !c.activo);
 
-  const visibles = useMemo(() => {
+  const { ranking, genericos } = useMemo(() => {
     const base = filtro === 'activos' ? activos : filtro === 'inactivos' ? inactivos : clientes;
-    return base.filter((c) => coincide(c, busqueda));
-  }, [filtro, busqueda, clientes, activos, inactivos]);
+    return ordenarRanking(base.filter((c) => coincide(c, busqueda)), criterio);
+  }, [filtro, busqueda, criterio, clientes, activos, inactivos]);
+
+  const visibles = [...ranking, ...genericos];
 
   function guardar(datos: DatosCliente) {
     if (editando) {
@@ -83,18 +103,21 @@ export function ListaClientes({ sembrados }: { sembrados: ClienteConResumen[] })
 
   return (
     <>
-      <div className="mt-5 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
+      {/* Buscar y filtrar viven juntos en superficie hundida: son los
+          controles de la lista, no parte de ella. */}
+      <div className="border-line bg-sunk mt-5 grid gap-3 rounded-xl border p-3 sm:flex sm:flex-wrap sm:items-center">
         <Input
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           placeholder="Buscar por nombre, contacto o CUIT"
           aria-label="Buscar clientes"
-          className="h-9 w-full min-w-0 sm:max-w-xs sm:flex-1"
+          className="bg-card h-9 w-full min-w-0 sm:max-w-xs sm:flex-1"
         />
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
           <Segmentado
             valor={filtro}
             onCambio={setFiltro}
+            className="bg-card"
             opciones={[
               { valor: 'activos', etiqueta: 'Activos', cantidad: activos.length },
               { valor: 'inactivos', etiqueta: 'Inactivos', cantidad: inactivos.length },
@@ -130,11 +153,10 @@ export function ListaClientes({ sembrados }: { sembrados: ClienteConResumen[] })
       ) : (
         <>
           <h2 className="rotulo-obra text-muted-foreground mt-6 font-mono text-xs tracking-widest uppercase">
-            {filtro === 'activos'
-              ? 'Activos'
-              : filtro === 'inactivos'
-                ? 'Inactivos'
-                : 'Todos'}
+            {filtro === 'activos' ? 'Activos' : filtro === 'inactivos' ? 'Inactivos' : 'Todos'}
+            <span className="text-faint normal-case">
+              · orden por {criterio === 'volumen' ? 'volumen' : 'facturado'}
+            </span>
           </h2>
 
           {/* Escritorio: la tabla, que deja comparar una columna de un vistazo. */}
@@ -143,120 +165,64 @@ export function ListaClientes({ sembrados }: { sembrados: ClienteConResumen[] })
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead className="w-28 text-right">Última compra</TableHead>
-                  <TableHead className="w-24 text-right">m³</TableHead>
                   <TableHead className="w-20 text-right">Ventas</TableHead>
-                  <TableHead className="w-40 text-right">Facturado</TableHead>
+                  <TableHead className="w-64">
+                    <Ordenar por="volumen" criterio={criterio} onCambio={setCriterio}>
+                      Volumen
+                    </Ordenar>
+                  </TableHead>
+                  <TableHead className="w-40 text-right">
+                    <Ordenar por="facturado" criterio={criterio} onCambio={setCriterio}>
+                      Facturado
+                    </Ordenar>
+                  </TableHead>
+                  <TableHead className="w-32 text-right">Última compra</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visibles.map((c) => (
-                  /* Toda la fila entra al cliente. El link sigue siendo un
-                     <a> de verdad y se estira con ::after sobre la fila, en
-                     vez de un onClick: asi ctrl+click y click del medio
-                     siguen abriendo en pestana nueva, y el foco por teclado
-                     cae en un solo lugar. Los botones de la derecha se
-                     levantan con z-10 para quedar por encima. */
-                  <TableRow key={c.id} className="group relative cursor-pointer">
-                    <TableCell>
-                      <Link
-                        href={`/clientes/${c.id}`}
-                        className="font-medium underline-offset-4 group-hover:underline after:absolute after:inset-0 after:content-['']"
-                      >
-                        {c.nombre}
-                      </Link>
-                      {c.generico && (
-                        <Estado
-                          className="ml-2 align-middle"
-                          title="La venta suelta. No se edita ni se desactiva: si se apaga, las ventas sin cliente se quedan sin donde caer."
-                        >
-                          Venta suelta
-                        </Estado>
-                      )}
-                      {!c.activo && (
-                        <Estado className="ml-2 align-middle">Inactivo</Estado>
-                      )}
-                      {c.contacto && (
-                        <span className="text-faint ml-2 hidden text-xs lg:inline">
-                          {c.contacto}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-faint text-right tabular-nums">
-                      {c.resumen.ultimaCompra ? fechaDeMomento(c.resumen.ultimaCompra) : '—'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {c.resumen.m3 ? <Cifra valor={dec(c.resumen.m3)} tamano="sm" /> : <span className="text-faint">—</span>}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {c.resumen.ventas || <span className="text-faint">—</span>}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {c.resumen.facturado ? $(c.resumen.facturado) : <span className="text-faint">—</span>}
-                    </TableCell>
-                    <TableCell>
-                      {/* z-10: por encima del link estirado de la fila. */}
-                      <div className="relative z-10 flex justify-end gap-0.5">
-                        {!c.generico && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => setEditando(c)}
-                              aria-label={`Editar ${c.nombre}`}
-                              title="Editar"
-                            >
-                              <Pencil />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => setDandoBaja(c)}
-                              aria-label={
-                                c.activo ? `Desactivar ${c.nombre}` : `Reactivar ${c.nombre}`
-                              }
-                              title={c.activo ? 'Desactivar' : 'Reactivar'}
-                            >
-                              {c.activo ? <UserMinus /> : <UserCheck />}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                {ranking.map((c) => (
+                  <Fila
+                    key={c.id}
+                    c={c}
+                    totalM3={totalM3}
+                    onEditar={setEditando}
+                    onBaja={setDandoBaja}
+                  />
+                ))}
+                {/* La venta suelta al pie y fuera del orden: no es un
+                    cliente, es la suma de todos los que no justificaron
+                    darlos de alta. Si encabezara el ranking, "mi cliente
+                    más importante" dejaría de significar algo. */}
+                {genericos.map((c) => (
+                  <Fila
+                    key={c.id}
+                    c={c}
+                    totalM3={totalM3}
+                    onEditar={setEditando}
+                    onBaja={setDandoBaja}
+                  />
                 ))}
               </TableBody>
             </Table>
           </div>
 
-          {/* Teléfono: tarjetas. Una tabla de cinco columnas no entra, y la
-              versión que "entra" con scroll horizontal no se usa nunca. */}
-          <ul className="mt-4 grid gap-2 sm:hidden">
-            {visibles.map((c) => (
-              <li key={c.id}>
-                <Link
-                  href={`/clientes/${c.id}`}
-                  className="border-line bg-card shadow-tarjeta block rounded-xl border p-3.5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="min-w-0 font-medium">{c.nombre}</span>
-                    {!c.activo && <Estado>Inactivo</Estado>}
-                  </div>
-                  {c.contacto && <p className="text-faint mt-0.5 text-xs">{c.contacto}</p>}
-                  <div className="mt-2.5 flex items-baseline gap-4 text-sm">
-                    <Cifra valor={dec(c.resumen.m3)} unidad="m³" tamano="sm" />
-                    <span className="text-faint text-xs">
-                      {c.resumen.ventas} {c.resumen.ventas === 1 ? 'venta' : 'ventas'}
-                    </span>
-                    <span className="ml-auto tabular-nums">
-                      {c.resumen.facturado ? $(c.resumen.facturado) : '—'}
-                    </span>
-                  </div>
-                </Link>
-              </li>
+          {/* Teléfono: una fila compacta por cliente. Una tabla de seis
+              columnas no entra, y la que "entra" con scroll lateral no la
+              usa nadie. */}
+          <ul className="border-line bg-card shadow-tarjeta divide-line mt-3 divide-y overflow-hidden rounded-xl border sm:hidden">
+            {ranking.map((c) => (
+              <FilaMovil key={c.id} c={c} totalM3={totalM3} />
             ))}
           </ul>
+          {genericos.map((c) => (
+            <ul
+              key={c.id}
+              className="border-line bg-card shadow-tarjeta mt-2 overflow-hidden rounded-xl border sm:hidden"
+            >
+              <FilaMovil c={c} totalM3={totalM3} />
+            </ul>
+          ))}
         </>
       )}
 
@@ -277,5 +243,216 @@ export function ListaClientes({ sembrados }: { sembrados: ClienteConResumen[] })
         onConfirmar={alternarActivo}
       />
     </>
+  );
+}
+
+/**
+ * El encabezado que además ordena.
+ *
+ * Los dos criterios NO dan el mismo orden, y por eso se puede cambiar:
+ * un cliente que compra recetas caras factura más llevando menos
+ * metros. Con la semilla de hoy, Corralón lleva un m³ menos que
+ * Constructora y deja casi trescientos mil pesos más.
+ */
+function Ordenar({
+  por,
+  criterio,
+  onCambio,
+  children,
+}: {
+  por: Criterio;
+  criterio: Criterio;
+  onCambio: (c: Criterio) => void;
+  children: React.ReactNode;
+}) {
+  const activo = por === criterio;
+  return (
+    <button
+      type="button"
+      onClick={() => onCambio(por)}
+      aria-pressed={activo}
+      className={cn(
+        'focus-visible:ring-ring/50 -mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none',
+        activo ? 'text-ink' : 'text-faint hover:text-ink',
+      )}
+    >
+      {children}
+      <ArrowDown className={cn('size-3 transition-opacity', activo ? 'opacity-100' : 'opacity-0')} aria-hidden />
+    </button>
+  );
+}
+
+/**
+ * Hace cuántos días que no compra.
+ *
+ * La pregunta no es "¿qué día compró?" sino "¿hace cuánto que no lo
+ * veo?", así que va en días y no en fecha. El color aparece recién
+ * cuando alguien se está yendo de verdad: pintar de ámbar una compra de
+ * hace tres días inventa una alarma que no existe.
+ */
+function UltimaCompra({ momento, corto = false }: { momento: string | null; corto?: boolean }) {
+  const dias = diasSinComprar(momento);
+  if (dias === null) return <span className="text-faint">—</span>;
+
+  const temp = temperatura(dias);
+  return (
+    <span
+      className={cn(
+        'num text-sm whitespace-nowrap',
+        temp === 'frio' ? 'text-danger-text font-medium' : temp === 'tibio' ? 'text-warn-text' : 'text-faint',
+      )}
+      title={momento ? fechaLargaDeMomento(momento) : undefined}
+    >
+      {dias === 0
+        ? 'hoy'
+        : dias === 1
+          ? 'ayer'
+          : /* En el teléfono la fila tiene cuatro datos y "hace 32 días"
+               los parte en dos líneas. */
+            corto
+            ? `${dias} d`
+            : `hace ${dias} días`}
+    </span>
+  );
+}
+
+/**
+ * La barra mide contra el total de la planta, no contra el más grande.
+ *
+ * "Casi tanto como el primero" no sirve para decidir nada. "El 19% de lo
+ * que sale de la planta" dice cuánto se depende de este cliente — y
+ * cuando todas las barras salen cortas y parecidas, ese ES el mensaje:
+ * ningún cliente la sostiene solo.
+ */
+function Participacion({ m3, totalM3, atenuada = false }: { m3: number; totalM3: number; atenuada?: boolean }) {
+  const pct = participacion(m3, totalM3);
+  return (
+    <span className="flex items-center gap-2.5">
+      <Cifra valor={dec(m3)} tamano="sm" atenuado={atenuada} className="w-14 shrink-0 justify-end" />
+      <span className="bg-sunk relative h-1.5 min-w-0 flex-1 overflow-hidden rounded-full">
+        <span
+          className={cn('absolute inset-y-0 left-0 rounded-full', atenuada ? 'bg-faint' : 'bg-s1')}
+          style={{ width: `${Math.max(pct, 1.5)}%` }}
+        />
+      </span>
+      <span className="num text-faint w-8 shrink-0 text-xs">{pct.toFixed(0)}%</span>
+    </span>
+  );
+}
+
+function Fila({
+  c,
+  totalM3,
+  onEditar,
+  onBaja,
+}: {
+  c: ClienteConResumen;
+  totalM3: number;
+  onEditar: (c: Cliente) => void;
+  onBaja: (c: ClienteConResumen) => void;
+}) {
+  return (
+    /* Toda la fila entra al cliente. El link sigue siendo un <a> de
+       verdad y se estira con ::after sobre la fila, en vez de un
+       onClick: así ctrl+click y click del medio siguen abriendo en
+       pestaña nueva, y el foco por teclado cae en un solo lugar. Los
+       botones de la derecha se levantan con z-10 para quedar encima. */
+    <TableRow
+      className={cn('group relative cursor-pointer', c.generico && 'border-line-strong border-t-2')}
+    >
+      <TableCell>
+        <span className="flex items-center gap-2">
+          {c.generico && <Store className="text-faint size-4 shrink-0" aria-hidden />}
+          <Link
+            href={`/clientes/${c.id}`}
+            className="font-medium underline-offset-4 group-hover:underline after:absolute after:inset-0 after:content-['']"
+          >
+            {c.nombre}
+          </Link>
+          {!c.activo && <Estado>Inactivo</Estado>}
+        </span>
+        <span className="text-faint mt-0.5 block text-xs">
+          {c.generico ? 'Venta suelta · no compite en el ranking' : (c.contacto ?? '—')}
+        </span>
+      </TableCell>
+      <TableCell className="num text-right text-sm">
+        {c.resumen.ventas || <span className="text-faint">—</span>}
+      </TableCell>
+      <TableCell>
+        {c.resumen.m3 ? (
+          <Participacion m3={c.resumen.m3} totalM3={totalM3} atenuada={c.generico} />
+        ) : (
+          <span className="text-faint">—</span>
+        )}
+      </TableCell>
+      <TableCell className="num text-right">
+        {c.resumen.facturado ? $(c.resumen.facturado) : <span className="text-faint">—</span>}
+      </TableCell>
+      <TableCell className="text-right">
+        {c.generico ? (
+          <span className="text-faint">—</span>
+        ) : (
+          <UltimaCompra momento={c.resumen.ultimaCompra} />
+        )}
+      </TableCell>
+      <TableCell>
+        {/* z-10: por encima del link estirado de la fila. */}
+        <div className="relative z-10 flex justify-end gap-0.5">
+          {!c.generico && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => onEditar(c)}
+                aria-label={`Editar ${c.nombre}`}
+                title="Editar"
+              >
+                <Pencil />
+              </Button>
+              {/* Desactivar, nunca borrar: el historial de ventas queda.
+                  Por eso una persona con un menos, y no un tacho. */}
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => onBaja(c)}
+                aria-label={c.activo ? `Desactivar ${c.nombre}` : `Reactivar ${c.nombre}`}
+                title={c.activo ? 'Desactivar' : 'Reactivar'}
+              >
+                {c.activo ? <UserMinus /> : <UserCheck />}
+              </Button>
+            </>
+          )}
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+/** En el teléfono cada cliente entra en dos líneas, no en una tarjeta. */
+function FilaMovil({ c, totalM3 }: { c: ClienteConResumen; totalM3: number }) {
+  const pct = participacion(c.resumen.m3, totalM3);
+  return (
+    <li>
+      <Link href={`/clientes/${c.id}`} className="block px-3.5 py-3">
+        <div className="flex items-start justify-between gap-2">
+          <span className="flex min-w-0 items-center gap-1.5">
+            {c.generico && <Store className="text-faint size-3.5 shrink-0" aria-hidden />}
+            <span className="truncate font-medium">{c.nombre}</span>
+          </span>
+          {!c.activo && <Estado>Inactivo</Estado>}
+        </div>
+        <p className="text-faint mt-0.5 truncate text-xs">
+          {c.generico ? 'Venta suelta' : (c.contacto ?? '—')}
+        </p>
+        <div className="mt-2 flex items-baseline gap-3 text-sm">
+          <Cifra valor={dec(c.resumen.m3)} unidad="m³" tamano="sm" atenuado={c.generico} />
+          <span className="num text-faint text-xs">{pct.toFixed(0)}%</span>
+          <span className="num">{c.resumen.facturado ? $(c.resumen.facturado) : '—'}</span>
+          <span className="ml-auto">
+            {c.generico ? null : <UltimaCompra momento={c.resumen.ultimaCompra} corto />}
+          </span>
+        </div>
+      </Link>
+    </li>
   );
 }
