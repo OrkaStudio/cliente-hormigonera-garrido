@@ -23,11 +23,19 @@ export async function traerCargas(ahora = new Date()) {
     sinCliente: [...sinCliente].reverse() as Carga[],
     asignadas: asignadas.length,
     m3: delDia.reduce((a, c) => a + c.m3, 0),
+    /** A quién SE PUEDE asignar: sólo los activos. */
     clientes: CLIENTES.filter((c) => c.activo).map((c) => ({
       id: c.id,
       nombre: c.nombre,
       generico: c.generico ?? false,
     })),
+    /**
+     * Cómo se llama el que YA está asignado — todos, incluidos los dados
+     * de baja. No es la misma lista: un cliente inactivo no aparece para
+     * asignarle una carga nueva, pero sus ventas viejas siguen siendo
+     * suyas y tienen que decir su nombre, no su código interno.
+     */
+    nombresDeCliente: Object.fromEntries(CLIENTES.map((c) => [c.id, c.nombre])),
     /** En qué orden se le asigna color a cada receta. Fijo, nunca cíclico. */
     recetas: Object.keys(RECETAS),
     /** Las últimas del historial, para ver más atrás sin salir. */
