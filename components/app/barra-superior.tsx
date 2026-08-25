@@ -5,7 +5,7 @@ import { EMPRESA } from '@/config/empresa';
 const APARTADOS = [
   { nombre: 'Inicio', href: '/' as const, activo: true },
   { nombre: 'Cargas', href: '/cargas' as const, activo: false },
-  { nombre: 'Ventas', href: null, activo: false },
+  { nombre: 'Ventas', href: '/ventas' as const, activo: false },
   { nombre: 'Clientes', href: '/clientes' as const, activo: false },
   { nombre: 'Materiales', href: '/materiales' as const, activo: false },
   { nombre: 'Rentabilidad', href: '/rentabilidad' as const, activo: false },
