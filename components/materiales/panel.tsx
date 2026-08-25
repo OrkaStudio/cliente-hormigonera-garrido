@@ -54,6 +54,21 @@ const BARRA: Record<NivelStock, string> = {
   'sin-dato': 'bg-line-strong',
 };
 
+/**
+ * El rótulo de una sección.
+ *
+ * Va AFUERA de la card y alineado con su borde, no adentro: la card es
+ * lo que el rótulo nombra, así que el rótulo no puede vivir dentro de la
+ * cosa que nombra.
+ */
+function Titulo({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="font-heading text-base font-semibold tracking-tight uppercase">
+      {children}
+    </h2>
+  );
+}
+
 export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
   const [ajustes, setAjustes] = useState<AjusteStock[]>([]);
   const [montado, setMontado] = useState(false);
@@ -116,13 +131,10 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
         {/* Los cuatro en UNA lista, no en cuatro tarjetas. Separados no se
             podían comparar: cada barra tenía su propia escala y cuál
             estaba peor había que deducirlo a mano. */}
-        <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1.6fr_1fr]">
-          <section className="border-line bg-card shadow-tarjeta overflow-hidden rounded-lg border">
-            <h2 className="rotulo-obra text-faint px-4 pt-4 pb-1 text-[11px] font-semibold tracking-[0.08em] uppercase">
-              Stock
-            </h2>
-
-            <div className="divide-line divide-y border-t-0">
+        <div className="mt-6 grid items-start gap-6 xl:grid-cols-2 [&>*]:min-w-0">
+          <section>
+            <Titulo>Stock</Titulo>
+            <div className="border-line bg-card shadow-tarjeta divide-line mt-3 divide-y overflow-hidden rounded-lg border">
               {ordenados.map((m) => {
                 const dias =
                   m.restante === null ? null : diasQueAguanta(m.restante, m.consumoDiario);
@@ -138,29 +150,57 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
 
                 return (
                   <article key={m.nombre} className="p-4">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                      <h3 className="font-heading flex items-center gap-2 text-base font-semibold">
-                        <span
-                          className={cn('size-2.5 shrink-0 rounded-full', PUNTO[nivel])}
-                          aria-hidden
-                        />
-                        {m.nombre}
-                      </h3>
+                    {/* Los datos a la izquierda, los días a la derecha, y
+                        la barra al pie a todo el ancho: la barra separa
+                        las filas y no hay que buscarla entre líneas. */}
+                    <div className="flex items-start justify-between gap-x-4">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-heading flex items-center gap-2 text-base font-semibold">
+                          <span
+                            className={cn('size-2.5 shrink-0 rounded-full', PUNTO[nivel])}
+                            aria-hidden
+                          />
+                          {m.nombre}
+                          {m.sinStock && <Estado className="ml-1">Sale del pozo</Estado>}
+                        </h3>
 
-                      {/* Los días son la respuesta; los kilos, el respaldo. */}
-                      {m.sinStock ? (
-                        <Estado>Sale del pozo</Estado>
-                      ) : dias === null ? (
-                        <Estado tono="warn">Sin dato</Estado>
-                      ) : (
-                        <span className="text-right">
-                          <span className={cn('num text-xl font-semibold', TEXTO[nivel])}>
-                            {dias} {dias === 1 ? 'día' : 'días'}
-                          </span>
-                          <span className="text-faint num block text-xs">
-                            {num(m.restante ?? 0)} de {num(m.capacidad ?? 0)} {m.unidad}
-                          </span>
-                        </span>
+                        <p className="text-muted-foreground num mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
+                          {m.sinStock ? (
+                            <span className="font-sans">
+                              Suministro del pozo: se consume, pero no hay existencia que cuidar.
+                            </span>
+                          ) : (
+                            <>
+                              <span>Consume {num(m.consumoDiario)} {m.unidad}/día</span>
+                              {m.capacidad !== null && (
+                                <span>Capacidad {num(m.capacidad)} {m.unidad}</span>
+                              )}
+                              {m.costo !== null && m.costo > 0 && (
+                                <span title="Provisorio hasta que exista Compras">
+                                  {m.costo < 100 ? `$ ${dec(m.costo)}` : $(m.costo)}/{m.unidad}
+                                  <span className="text-faint font-sans"> · provisorio</span>
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </p>
+                      </div>
+
+                      {!m.sinStock && (
+                        <div className="shrink-0 text-right">
+                          {dias === null ? (
+                            <Estado tono="warn">Sin dato</Estado>
+                          ) : (
+                            <>
+                              <span className={cn('num text-xl font-semibold', TEXTO[nivel])}>
+                                {dias} {dias === 1 ? 'día' : 'días'}
+                              </span>
+                              <span className="text-faint num block text-xs">
+                                {num(m.restante ?? 0)} / {num(m.capacidad ?? 0)} {m.unidad}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -170,7 +210,7 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
                          39% de capacidad y es el que MEJOR está: la barra
                          y el color decían cosas opuestas. */
                       <div
-                        className="bg-sunk mt-2.5 h-1.5 overflow-hidden rounded-full"
+                        className="bg-sunk mt-3 h-1.5 overflow-hidden rounded-full"
                         role="img"
                         aria-label={`Aguanta ${dias} de los ${maxDias} días del material que más dura`}
                       >
@@ -181,35 +221,15 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
                       </div>
                     )}
 
-                    <div className="text-muted-foreground mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs">
-                      {m.sinStock ? (
-                        <span>Suministro del pozo: se consume, pero no hay existencia que cuidar.</span>
-                      ) : (
-                        <>
-                          <span>
-                            consume <span className="num">{num(m.consumoDiario)}</span> {m.unidad}
-                            /día
-                          </span>
-                          {sug && (
-                            <span>
-                              entran <span className="num">{num(sug.cantidad)}</span> {sug.unidad}{' '}
-                              más
-                            </span>
-                          )}
-                          {m.costo !== null && m.costo > 0 && (
-                            <span title="Provisorio hasta que exista Compras">
-                              <span className="num">
-                                {m.costo < 100 ? `$ ${dec(m.costo)}` : $(m.costo)}
-                              </span>
-                              <span className="text-faint">/{m.unidad} · provisorio</span>
-                            </span>
-                          )}
-                        </>
-                      )}
+                    <div className="text-faint mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                       <span className={m.medidoPorPlc ? 'text-plc-text' : 'text-warn-text'}>
                         {m.medidoPorPlc ? 'lo pesa el PLC' : 'no lo pesa el PLC'}
                       </span>
-
+                      {sug && (
+                        <span>
+                          entran <span className="num">{num(sug.cantidad)}</span> {sug.unidad} más
+                        </span>
+                      )}
                       {merma && (
                         <span>
                           merma medida{' '}
@@ -218,7 +238,6 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
                           </span>
                         </span>
                       )}
-
                       {!m.sinStock && m.restante !== null && (
                         <span className="ml-auto">
                           <AjustarStock
@@ -240,12 +259,8 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
           {/* El cruce que faltaba: stock y recetas viven en la misma
               pantalla y no se hablaban. */}
           <section>
-            <div className="border-line bg-card shadow-tarjeta overflow-hidden rounded-lg border">
-            <h2 className="rotulo-obra text-faint px-4 pt-4 pb-1 text-[11px] font-semibold tracking-[0.08em] uppercase">
-              Cuánto puedo producir
-            </h2>
-
-            <div className="divide-line divide-y">
+            <Titulo>Capacidad de producción</Titulo>
+            <div className="border-line bg-card shadow-tarjeta divide-line mt-3 divide-y overflow-hidden rounded-lg border">
               {salidas.length === 0 ? (
                 <p className="text-muted-foreground p-4 text-sm">
                   Sin stock deducido no se puede estimar cuánto sale.
@@ -267,71 +282,70 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
                 ))
               )}
             </div>
-            </div>
 
             <p className="text-faint mt-2 text-xs">
               Con lo que hay en los silos. Manda el material que menos da: da igual que
               sobren áridos si el cemento no llega.
             </p>
-          </section>
-        </div>
 
-        <section className="mt-8">
-          <div className="border-line bg-panel shadow-tarjeta overflow-hidden rounded-lg border">
-          <h2 className="rotulo-obra text-faint px-4 pt-4 pb-1 text-[11px] font-semibold tracking-[0.08em] uppercase">
-            Recetas
-          </h2>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <div className="mt-8">
+            <Titulo>Recetas · dosificación por m³</Titulo>
+            <div className="border-line bg-panel shadow-tarjeta mt-3 overflow-x-auto rounded-lg border">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="border-line text-faint border-b text-left text-xs">
-                  <th className="px-4 py-3 font-medium">Receta</th>
+                  <th className="px-3 py-3 font-medium">Receta</th>
                   {d.recetas[0]?.dosificacion.map((x) => (
-                    <th key={x.material} className="px-4 py-3 text-right font-medium">
+                    <th key={x.material} className="px-2 py-3 text-right font-medium">
                       {x.material}
+                      <span className="text-faint ml-1 font-normal">({x.unidad})</span>
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-right font-medium">Costo /m³</th>
-                  <th className="px-4 py-3 text-right font-medium">Margen</th>
+                  <th className="px-2 py-3 text-right font-medium whitespace-nowrap">Costo /m³</th>
+                  <th className="px-3 py-3 text-right font-medium">Margen</th>
                 </tr>
               </thead>
               <tbody>
                 {d.recetas.map((r) => (
                   <tr key={r.codigo} className="border-line border-b last:border-0">
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <span className="font-mono font-medium">{r.codigo}</span>
-                      <span className="text-faint ml-2 text-xs">
-                        {r.cargas} {r.cargas === 1 ? 'carga' : 'cargas'}
+                      <span
+                        className="text-faint ml-2 text-xs"
+                        title={`${r.cargas} ${r.cargas === 1 ? 'carga' : 'cargas'} producidas`}
+                      >
+                        ×{r.cargas}
                       </span>
                     </td>
                     {r.dosificacion.map((x) => (
-                      <td key={x.material} className="px-4 py-3 text-right font-mono tabular-nums">
+                      <td
+                        key={x.material}
+                        className="px-2 py-3 text-right font-mono whitespace-nowrap tabular-nums"
+                      >
                         {dec(x.porM3)}
-                        <span className="text-faint ml-0.5 text-xs">{x.unidad}</span>
                       </td>
                     ))}
-                    <td className="px-4 py-3 text-right font-mono tabular-nums">
+                    <td className="px-2 py-3 text-right font-mono whitespace-nowrap tabular-nums">
                       {$(Math.round(r.costoM3))}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums">
+                    <td className="px-3 py-3 text-right font-mono tabular-nums">
                       {r.margenPct.toFixed(1).replace('.', ',')}%
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-          </div>
+            </div>
 
-          <p className="text-faint mt-2 text-xs">
-            La dosificación es por m³ y es la <span className="text-ink-soft">declarada</span>:
+            <p className="text-faint mt-2 text-xs">
+              La dosificación es por m³ y es la <span className="text-ink-soft">declarada</span>:
             la que manda es la del PLC. Si no coinciden, el problema está en el autómata y no
             se arregla calibrando una balanza. Los costos por kilo son{' '}
             <span className="text-ink-soft">provisorios</span> hasta que exista Compras.
-          </p>
-        </section>
-
+            </p>
+            </div>
+          </section>
+        </div>
       </main>
     </>
   );
