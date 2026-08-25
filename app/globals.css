@@ -105,6 +105,10 @@
     --color-s2: var(--s2);
     --color-s3: var(--s3);
     --color-s4: var(--s4);
+    --color-s1-relleno: var(--s1-relleno);
+    --color-s2-relleno: var(--s2-relleno);
+    --color-s3-relleno: var(--s3-relleno);
+    --color-s4-relleno: var(--s4-relleno);
     --color-plc-soft: var(--plc-soft);
     --color-plc-text: var(--plc-text);
 
@@ -204,6 +208,24 @@
     --s2: #CC7000;
     --s3: #1E8A5F;
     --s4: #A0459B;
+
+    /**
+     * La misma serie, apenas más oscura, para cuando el color es RELLENO
+     * con texto blanco encima — la etiqueta de receta.
+     *
+     * No es una paleta nueva: es la mínima corrección para que el texto
+     * se lea. Con los valores de arriba, el blanco sobre el ámbar da
+     * 3,57:1 y sobre el verde 4,32:1, los dos por debajo del 4,5 que
+     * pide un texto de este tamaño. Con éstos dan 4,67 y 4,66. El azul
+     * ya daba 5,48 y no se toca.
+     *
+     * Las barras y los cuadrados siguen usando la serie de arriba: un
+     * objeto gráfico sólo necesita 3:1 y ahí los originales pasan.
+     */
+    --s1-relleno: #1A6DAD;
+    --s2-relleno: #AF6000;
+    --s3-relleno: #1D845B;
+    --s4-relleno: #8E3D8A;
 
     /* El dato que viene del PLC. */
     --plc: #356F97;
