@@ -47,7 +47,7 @@ export function EtiquetaReceta({
   return (
     <span
       className={cn(
-        'num inline-flex items-center rounded-[4px] px-2 py-1 text-sm font-semibold',
+        'num inline-flex items-center rounded-[4px] px-1.5 py-0.5 text-xs font-semibold',
         color ? `${RELLENO[color]} text-on-accent` : 'bg-sunk text-ink',
         className,
       )}
