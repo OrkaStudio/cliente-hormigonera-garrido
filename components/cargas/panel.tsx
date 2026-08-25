@@ -115,6 +115,8 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
 
   const hayFiltro = busqueda.trim() !== '' || receta !== 'todas' || dia !== 'todos';
 
+  const nombreDe = (id: string | null) => (id ? (d.nombresDeCliente[id] ?? id) : null);
+
   return (
     <>
       <BarraSuperior activo="Cargas" />
@@ -304,16 +306,26 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
                     <TableHead className="w-24">
                       <Rotulo>Receta</Rotulo>
                     </TableHead>
-                    <TableHead className="w-32 text-right">
+                    {/* Absorbe el ancho sobrante. Sin ella, la tabla
+                        repartía 130 px de vacío en cada columna de
+                        números y el rótulo quedaba flotando sobre un
+                        hueco en vez de sobre su dato. */}
+                    <TableHead className="w-full min-w-40">
+                      <Rotulo>Cliente</Rotulo>
+                    </TableHead>
+                    <TableHead className="w-24 text-right whitespace-nowrap">
                       <Rotulo>Volumen</Rotulo>
                     </TableHead>
-                    <TableHead className="w-36 text-right">
+                    <TableHead className="w-28 text-right whitespace-nowrap">
                       <Rotulo>Monto</Rotulo>
                     </TableHead>
-                    <TableHead className="w-44 text-center">
-                      <Rotulo>Distribución</Rotulo>
+                    {/* "En blanco" y no "Distribución": el porcentaje es
+                        cuánto de esa venta se facturó, y con el rótulo
+                        anterior no se sabía si era el blanco o el negro. */}
+                    <TableHead className="w-36 text-center whitespace-nowrap">
+                      <Rotulo>En blanco</Rotulo>
                     </TableHead>
-                    <TableHead className="w-32 text-right">
+                    <TableHead className="w-28 text-right whitespace-nowrap">
                       <Rotulo>Estado</Rotulo>
                     </TableHead>
                   </TableRow>
@@ -324,7 +336,7 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
                       {/* El encabezado del día trae su propio resumen: la
                           lista deja de ser una tira plana. */}
                       <TableRow className="bg-sunk/60 hover:bg-sunk/60">
-                        <TableCell colSpan={7} className="py-2">
+                        <TableCell colSpan={8} className="py-2">
                           <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
                             <span className="font-medium">
                               {i === 0 && esHoy(grupo.dia)
@@ -344,6 +356,7 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
                           key={c.id}
                           carga={c}
                           recetas={d.recetas}
+                          nombreCliente={nombreDe(c.clienteId)}
                           atenuada={!esHoy(grupo.dia)}
                         />
                       ))}
@@ -413,10 +426,12 @@ function Fragmento({ children }: { children: React.ReactNode }) {
 function FilaCarga({
   carga: c,
   recetas,
+  nombreCliente,
   atenuada = false,
 }: {
   carga: Carga;
   recetas: string[];
+  nombreCliente: string | null;
   /** Los días anteriores pesan menos que hoy: es historial, no novedad. */
   atenuada?: boolean;
 }) {
@@ -429,6 +444,9 @@ function FilaCarga({
       <TableCell className="num text-sm font-medium">{c.id}</TableCell>
       <TableCell>
         <EtiquetaReceta receta={c.receta} recetas={recetas} />
+      </TableCell>
+      <TableCell className="max-w-0 truncate text-sm">
+        {nombreCliente ?? <span className="text-faint italic">sin asignar</span>}
       </TableCell>
       <TableCell className="text-right">
         <Cifra valor={dec(c.m3)} unidad="m³" tamano="sm" />
