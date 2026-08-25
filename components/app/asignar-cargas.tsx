@@ -132,7 +132,7 @@ function FilaAsignarDetallada({
   return (
     <div className="border-line bg-card flex min-w-0 flex-wrap items-end gap-x-6 gap-y-4 rounded-lg border p-3">
       <Campo rotulo="Carga">
-        <span className="num text-sm font-semibold">{carga.id}</span>
+        <span className="num text-sm font-medium">{carga.id}</span>
       </Campo>
       <Campo rotulo="Hora fin">
         <span className="num text-sm">{hora(carga.momento)}</span>
@@ -141,7 +141,7 @@ function FilaAsignarDetallada({
         <EtiquetaReceta receta={carga.receta} recetas={recetas} />
       </Campo>
       <Campo rotulo="Volumen">
-        <Cifra valor={dec(carga.m3)} unidad="m³" tamano="md" />
+        <Cifra valor={dec(carga.m3)} unidad="m³" tamano="sm" />
       </Campo>
 
       <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-1">

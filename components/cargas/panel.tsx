@@ -211,8 +211,8 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
         {sinCliente.length > 0 && (
           <section className="border-line bg-sunk mt-4 rounded-lg border p-4">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-              <h2 className="font-heading flex items-center gap-2 text-base font-semibold">
-                <CircleAlert className="text-warn size-5 shrink-0" aria-hidden />
+              <h2 className="font-heading flex items-center gap-2 text-sm font-semibold">
+                <CircleAlert className="text-warn size-4 shrink-0" aria-hidden />
                 Cargas sin cliente ({num(sinCliente.length)})
               </h2>
               <span className="text-muted-foreground num text-xs">
@@ -310,7 +310,7 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
                     <TableHead className="w-36 text-right">
                       <Rotulo>Monto</Rotulo>
                     </TableHead>
-                    <TableHead className="w-52">
+                    <TableHead className="w-44 text-center">
                       <Rotulo>Distribución</Rotulo>
                     </TableHead>
                     <TableHead className="w-32 text-right">
@@ -331,7 +331,7 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
                                 ? 'Hoy'
                                 : fechaLargaDeMomento(grupo.momento)}
                             </span>
-                            <span className="text-faint num text-xs">
+                            <span className="text-muted-foreground num text-xs">
                               {num(grupo.resumen.cargas)}{' '}
                               {grupo.resumen.cargas === 1 ? 'carga' : 'cargas'} ·{' '}
                               {dec(grupo.resumen.m3)} m³ · {$(grupo.resumen.facturado)}
@@ -430,23 +430,26 @@ function FilaCarga({
       <TableCell>
         <EtiquetaReceta receta={c.receta} recetas={recetas} />
       </TableCell>
-      {/* El volumen es lo que la planta produjo: es el número de la fila. */}
       <TableCell className="text-right">
-        <Cifra valor={dec(c.m3)} unidad="m³" tamano="lg" />
+        <Cifra valor={dec(c.m3)} unidad="m³" tamano="sm" />
       </TableCell>
       <TableCell className="num text-right text-sm">
         {c.total ? $(c.total) : <span className="text-faint">—</span>}
       </TableCell>
+      {/* El porcentaje ANTES de la barra y con ancho fijo: así los de
+          todas las filas caen en la misma columna y se comparan de
+          arriba abajo. Con el número después de la barra bailaban. */}
       <TableCell>
         {corte && pct !== null ? (
-          <span className="flex items-center gap-2.5">
-            <BarraFiscal blanco={corte.blanco} negro={corte.negro} className="w-16 shrink-0" />
-            <span className="num text-xs whitespace-nowrap">
-              {pct === 100 ? '100% Blanco' : pct === 0 ? '100% Negro' : `${pct}% B / ${100 - pct}% N`}
-            </span>
+          <span
+            className="flex items-center justify-center gap-2.5"
+            title={`${$(corte.blanco)} facturado de ${$(c.total)}`}
+          >
+            <span className="num w-9 shrink-0 text-right text-xs">{pct}%</span>
+            <BarraFiscal blanco={corte.blanco} negro={corte.negro} className="w-20 shrink-0" />
           </span>
         ) : (
-          <span className="text-faint text-xs italic">Sin asignar</span>
+          <span className="text-faint block text-center text-xs italic">Sin asignar</span>
         )}
       </TableCell>
       <TableCell className="text-right">
