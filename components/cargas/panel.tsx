@@ -2,13 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search } from 'lucide-react';
+import { CircleAlert, Search } from 'lucide-react';
 
 import { BarraSuperior } from '@/components/app/barra-superior';
 import { AsignarCargas } from '@/components/app/asignar-cargas';
 import { BarraFiscal } from '@/components/dominio/barra-fiscal';
 import { Cifra } from '@/components/dominio/cifra';
 import { Estado } from '@/components/dominio/estado';
+import {
+  EtiquetaReceta,
+  fondoDeReceta,
+  textoDeReceta,
+} from '@/components/dominio/etiqueta-receta';
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import { Input } from '@/components/ui/input';
 import { Segmentado } from '@/components/dominio/segmentado';
@@ -26,7 +31,6 @@ import {
   agruparPorDia,
   coincideCarga,
   diaLocal,
-  colorDeReceta,
   mezclaPorReceta,
   resumirCargas,
 } from '@/lib/dominio/cargas';
@@ -60,6 +64,7 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
   const [delDia, setDelDia] = useState<Carga[]>(d.delDia);
   const [busqueda, setBusqueda] = useState('');
   const [receta, setReceta] = useState('todas');
+  const [dia, setDia] = useState('todos');
 
   // Las asignaciones hechas en este navegador se aplican después de
   // montar: en el servidor no existe localStorage.
@@ -81,14 +86,34 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
   const hoy = useMemo(() => resumirCargas(delDia), [delDia]);
   const mezcla = useMemo(() => mezclaPorReceta(delDia), [delDia]);
 
-  const dias = useMemo(() => {
-    const todas = [...delDia, ...d.recientes].filter(
-      (c) => coincideCarga(c, busqueda) && (receta === 'todas' || c.receta === receta),
-    );
-    return agruparPorDia(todas);
-  }, [delDia, d.recientes, busqueda, receta]);
+  const todasLasCargas = useMemo(() => [...delDia, ...d.recientes], [delDia, d.recientes]);
 
-  const hayFiltro = busqueda.trim() !== '' || receta !== 'todas';
+  /* Un desplegable de los días que existen, no un calendario: son cuatro
+     y elegir en un almanaque una fecha sin cargas no lleva a ningún
+     lado. */
+  const opcionesDeDia = useMemo(
+    () =>
+      agruparPorDia(todasLasCargas).map((g) => ({
+        valor: g.dia,
+        etiqueta: esHoy(g.dia) ? 'Hoy' : fechaLargaDeMomento(g.momento),
+      })),
+    [todasLasCargas],
+  );
+
+  const dias = useMemo(
+    () =>
+      agruparPorDia(
+        todasLasCargas.filter(
+          (c) =>
+            coincideCarga(c, busqueda) &&
+            (receta === 'todas' || c.receta === receta) &&
+            (dia === 'todos' || diaLocal(c.momento) === dia),
+        ),
+      ),
+    [todasLasCargas, busqueda, receta, dia],
+  );
+
+  const hayFiltro = busqueda.trim() !== '' || receta !== 'todas' || dia !== 'todos';
 
   return (
     <>
@@ -103,9 +128,10 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
         </p>
 
         {/* El día de un vistazo. Cuánto, de qué, y cuánto se facturó —
-            las tres preguntas que José trae cuando entra. */}
-        <section className="border-line bg-card shadow-tarjeta mt-5 grid gap-x-8 gap-y-5 rounded-lg border p-4 lg:grid-cols-[auto_minmax(14rem,1fr)_minmax(12rem,1fr)_auto] lg:items-center">
-          <div className="flex gap-8">
+            las tres preguntas que José trae cuando entra. Separadas por
+            líneas: son cuatro lecturas distintas, no una fila de datos. */}
+        <section className="border-line bg-card shadow-tarjeta divide-line mt-5 grid gap-x-6 divide-y rounded-lg border p-4 sm:divide-x sm:divide-y-0 lg:grid-cols-[auto_minmax(16rem,1fr)_minmax(14rem,1fr)_auto]">
+          <div className="flex gap-8 pb-4 sm:pr-6 sm:pb-0">
             <Dato rotulo="Cargas hoy">
               <Cifra valor={num(hoy.cargas)} tamano="lg" />
             </Dato>
@@ -114,56 +140,70 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
             </Dato>
           </div>
 
-          <Dato rotulo="Mezcla del día">
-            {mezcla.length === 0 ? (
-              <p className="text-faint text-sm">Todavía no se produjo</p>
-            ) : (
-              <>
-                <span className="bg-sunk flex h-2.5 overflow-hidden rounded-full">
-                  {mezcla.map((p) => (
-                    <span
-                      key={p.receta}
-                      className={cn('h-full', colorFondo(p.receta, d.recetas))}
-                      style={{ width: `${p.pct}%` }}
-                    />
-                  ))}
-                </span>
-                <span className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                  {mezcla.map((p) => (
-                    <span key={p.receta} className="flex items-center gap-1.5 text-xs">
-                      <Muestra receta={p.receta} recetas={d.recetas} />
-                      <span className="font-mono">{p.receta}</span>
-                      <span className="text-faint num">{dec(p.m3)} m³</span>
-                    </span>
-                  ))}
-                </span>
-              </>
-            )}
-          </Dato>
-
-          <Dato rotulo="Facturado del día">
-            {hoy.pctBlanco === null ? (
-              <p className="text-faint text-sm">Ninguna con el corte definido</p>
-            ) : (
-              <>
-                <BarraFiscal blanco={hoy.blanco} negro={hoy.negro} className="h-2.5" />
-                <span className="mt-2 flex flex-wrap justify-between gap-x-4 text-xs">
-                  <span>
-                    <span className="num">{hoy.pctBlanco.toFixed(0)}%</span> en blanco
+          <div className="py-4 sm:px-6 sm:py-0">
+            <Dato rotulo="Mezcla del día">
+              {mezcla.length === 0 ? (
+                <p className="text-faint text-sm">Todavía no se produjo</p>
+              ) : (
+                <>
+                  <span className="bg-sunk flex h-3 overflow-hidden rounded">
+                    {mezcla.map((p) => (
+                      <span
+                        key={p.receta}
+                        className={cn('h-full', fondoDeReceta(p.receta, d.recetas))}
+                        style={{ width: `${p.pct}%` }}
+                      />
+                    ))}
                   </span>
-                  <span className="text-faint num">{$(hoy.facturado)}</span>
-                </span>
-              </>
-            )}
-          </Dato>
+                  {/* A los extremos, como la barra: cada rótulo cae del
+                      lado de su tramo. */}
+                  <span className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm">
+                    {mezcla.map((p) => (
+                      <span
+                        key={p.receta}
+                        className={cn('num', textoDeReceta(p.receta, d.recetas))}
+                      >
+                        {p.receta} ({dec(p.m3)} m³)
+                      </span>
+                    ))}
+                  </span>
+                </>
+              )}
+            </Dato>
+          </div>
 
-          <Dato rotulo="Sin cliente">
-            <Cifra
-              valor={num(sinCliente.length)}
-              tamano="lg"
-              tono={sinCliente.length > 0 ? 'warn' : 'neutro'}
-            />
-          </Dato>
+          <div className="py-4 sm:px-6 sm:py-0">
+            <Dato rotulo="Distribución">
+              {hoy.pctBlanco === null ? (
+                <p className="text-faint text-sm">Ninguna con el corte definido</p>
+              ) : (
+                <>
+                  <BarraFiscal blanco={hoy.blanco} negro={hoy.negro} className="h-3 rounded" />
+                  <span className="mt-2 flex justify-between gap-x-4 text-sm">
+                    <span>
+                      Blanco <span className="num text-faint">{hoy.pctBlanco.toFixed(0)}%</span>
+                    </span>
+                    <span>
+                      <span className="num text-faint">
+                        {(100 - hoy.pctBlanco).toFixed(0)}%
+                      </span>{' '}
+                      Negro
+                    </span>
+                  </span>
+                </>
+              )}
+            </Dato>
+          </div>
+
+          <div className="pt-4 sm:pt-0 sm:pl-6">
+            <Dato rotulo="Cargas sin cliente">
+              <Cifra
+                valor={num(sinCliente.length)}
+                tamano="lg"
+                tono={sinCliente.length > 0 ? 'warn' : 'neutro'}
+              />
+            </Dato>
+          </div>
         </section>
 
         {/* R4 — molesta por jerarquía y contador, no por un rectángulo de
@@ -171,7 +211,8 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
         {sinCliente.length > 0 && (
           <section className="border-line bg-sunk mt-4 rounded-lg border p-4">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-              <h2 className="rotulo-obra font-heading text-base font-semibold">
+              <h2 className="font-heading flex items-center gap-2 text-base font-semibold">
+                <CircleAlert className="text-warn size-5 shrink-0" aria-hidden />
                 Cargas sin cliente ({num(sinCliente.length)})
               </h2>
               <span className="text-muted-foreground num text-xs">
@@ -180,37 +221,63 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
             </div>
 
             <div className="mt-3">
-              <AsignarCargas cargas={sinCliente} clientes={d.clientes} onAsignar={asignar} />
+              <AsignarCargas
+                cargas={sinCliente}
+                clientes={d.clientes}
+                onAsignar={asignar}
+                formato="detallada"
+                recetas={d.recetas}
+              />
             </div>
           </section>
         )}
 
         <section className="border-line bg-card shadow-tarjeta mt-4 overflow-hidden rounded-lg border">
-          <div className="border-line flex flex-wrap items-center gap-3 border-b p-4">
-            <span className="relative min-w-0 flex-1 sm:max-w-xs">
-              <Search
-                className="text-faint pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
-                aria-hidden
+          {/* Cada filtro con su rótulo arriba: son tres controles distintos
+              y sin nombre había que probarlos para saber qué hacían. */}
+          <div className="border-line flex flex-wrap items-end gap-5 border-b p-4">
+            <Filtro rotulo="Buscar carga" htmlFor="buscar">
+              <span className="relative block">
+                <Search
+                  className="text-faint pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
+                  aria-hidden
+                />
+                <Input
+                  id="buscar"
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  placeholder="Ej: C-1595"
+                  className="h-9 w-full pl-8 sm:w-56"
+                />
+              </span>
+            </Filtro>
+
+            <Filtro rotulo="Día" htmlFor="dia">
+              <select
+                id="dia"
+                value={dia}
+                onChange={(e) => setDia(e.target.value)}
+                className="border-line bg-card focus-visible:ring-ring/50 h-9 rounded-md border px-2.5 text-sm focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <option value="todos">Todos</option>
+                {opcionesDeDia.map((o) => (
+                  <option key={o.valor} value={o.valor}>
+                    {o.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </Filtro>
+
+            <Filtro rotulo="Receta">
+              <Segmentado
+                valor={receta}
+                onCambio={setReceta}
+                opciones={[
+                  { valor: 'todas', etiqueta: 'Todas' },
+                  ...d.recetas.map((r) => ({ valor: r, etiqueta: r })),
+                ]}
               />
-              <Input
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar por carga o receta"
-                aria-label="Buscar cargas"
-                className="h-9 w-full pl-8"
-              />
-            </span>
-            {/* Sin filtro de fecha: el historial ya viene agrupado por día
-                y son cuatro. Un calendario sobre cuatro días es un control
-                que no ahorra nada. */}
-            <Segmentado
-              valor={receta}
-              onCambio={setReceta}
-              opciones={[
-                { valor: 'todas', etiqueta: 'Todas' },
-                ...d.recetas.map((r) => ({ valor: r, etiqueta: r })),
-              ]}
-            />
+            </Filtro>
           </div>
 
           {dias.length === 0 ? (
@@ -219,7 +286,7 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
               titulo={hayFiltro ? 'Ninguna carga coincide' : 'Todavía no se produjo'}
               descripcion={
                 hayFiltro
-                  ? 'Probá con otro número de carga o sacá el filtro de receta.'
+                  ? 'Probá con otro número de carga, otro día, o sacá el filtro de receta.'
                   : 'Cuando el PLC cierre el primer ciclo, la carga aparece acá sola.'
               }
             />
@@ -228,38 +295,57 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
               <Table>
                 <TableHeader className="bg-sunk">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-20">Hora</TableHead>
-                    <TableHead className="w-24">Carga</TableHead>
-                    <TableHead className="w-28">Receta</TableHead>
-                    <TableHead className="w-28 text-right">Volumen</TableHead>
-                    <TableHead className="w-36 text-right">Monto</TableHead>
-                    <TableHead className="w-44">Facturado</TableHead>
-                    <TableHead className="w-32 text-right">Estado</TableHead>
+                    <TableHead className="w-20">
+                      <Rotulo>Hora</Rotulo>
+                    </TableHead>
+                    <TableHead className="w-24">
+                      <Rotulo>Carga</Rotulo>
+                    </TableHead>
+                    <TableHead className="w-24">
+                      <Rotulo>Receta</Rotulo>
+                    </TableHead>
+                    <TableHead className="w-32 text-right">
+                      <Rotulo>Volumen</Rotulo>
+                    </TableHead>
+                    <TableHead className="w-36 text-right">
+                      <Rotulo>Monto</Rotulo>
+                    </TableHead>
+                    <TableHead className="w-52">
+                      <Rotulo>Distribución</Rotulo>
+                    </TableHead>
+                    <TableHead className="w-32 text-right">
+                      <Rotulo>Estado</Rotulo>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dias.map((dia, i) => (
-                    <Fragmento key={dia.dia}>
+                  {dias.map((grupo, i) => (
+                    <Fragmento key={grupo.dia}>
                       {/* El encabezado del día trae su propio resumen: la
                           lista deja de ser una tira plana. */}
                       <TableRow className="bg-sunk/60 hover:bg-sunk/60">
                         <TableCell colSpan={7} className="py-2">
                           <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
                             <span className="font-medium">
-                              {i === 0 && esHoy(dia.dia)
+                              {i === 0 && esHoy(grupo.dia)
                                 ? 'Hoy'
-                                : fechaLargaDeMomento(dia.momento)}
+                                : fechaLargaDeMomento(grupo.momento)}
                             </span>
                             <span className="text-faint num text-xs">
-                              {num(dia.resumen.cargas)}{' '}
-                              {dia.resumen.cargas === 1 ? 'carga' : 'cargas'} ·{' '}
-                              {dec(dia.resumen.m3)} m³ · {$(dia.resumen.facturado)}
+                              {num(grupo.resumen.cargas)}{' '}
+                              {grupo.resumen.cargas === 1 ? 'carga' : 'cargas'} ·{' '}
+                              {dec(grupo.resumen.m3)} m³ · {$(grupo.resumen.facturado)}
                             </span>
                           </span>
                         </TableCell>
                       </TableRow>
-                      {dia.cargas.map((c) => (
-                        <FilaCarga key={c.id} carga={c} recetas={d.recetas} />
+                      {grupo.cargas.map((c) => (
+                        <FilaCarga
+                          key={c.id}
+                          carga={c}
+                          recetas={d.recetas}
+                          atenuada={!esHoy(grupo.dia)}
+                        />
                       ))}
                     </Fragmento>
                   ))}
@@ -273,6 +359,38 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
   );
 }
 
+/** El rótulo de una columna: chico, en mayúsculas y espaciado. */
+function Rotulo({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
+      {children}
+    </span>
+  );
+}
+
+/** Un filtro con su nombre arriba. */
+function Filtro({
+  rotulo,
+  htmlFor,
+  children,
+}: {
+  rotulo: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid gap-1.5">
+      <label
+        htmlFor={htmlFor}
+        className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase"
+      >
+        {rotulo}
+      </label>
+      {children}
+    </div>
+  );
+}
+
 /** Un rótulo arriba y el dato abajo. La pieza del resumen del día. */
 function Dato({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
@@ -281,49 +399,6 @@ function Dato({ rotulo, children }: { rotulo: string; children: React.ReactNode 
       <div className="mt-1.5">{children}</div>
     </div>
   );
-}
-
-/**
- * La muestra de color de una receta.
- *
- * Un cuadrado y no un relleno con el nombre adentro: el texto blanco
- * sobre el ámbar de H-25 da 3,57:1 y sobre el verde de H-30 da 4,32:1,
- * los dos por debajo del 4,5 que pide un texto de este tamaño. El
- * cuadrado sólo tiene que separarse del fondo —3:1— y ahí los tres
- * pasan holgados. Es además el mismo recurso que usa "Costo por
- * material" en Rentabilidad.
- */
-function Muestra({ receta, recetas }: { receta: string; recetas: string[] }) {
-  const color = colorDeReceta(receta, recetas);
-  return (
-    <span
-      className={cn(
-        'inline-block size-2.5 shrink-0 rounded-[3px]',
-        color ? colorFondo(receta, recetas) : 'border-line-strong border',
-      )}
-      aria-hidden
-    />
-  );
-}
-
-/**
- * Las clases van escritas enteras a propósito.
- *
- * Tailwind escanea el código buscando nombres de clase literales: un
- * `bg-${color}` armado en tiempo de ejecución nunca aparece en el
- * escaneo y el CSS no se genera. La receta sale gris y nadie entiende
- * por qué.
- */
-const FONDO_SERIE = {
-  s1: 'bg-s1',
-  s2: 'bg-s2',
-  s3: 'bg-s3',
-  s4: 'bg-s4',
-} as const;
-
-function colorFondo(receta: string, recetas: string[]) {
-  const color = colorDeReceta(receta, recetas);
-  return color ? FONDO_SERIE[color] : 'bg-faint';
 }
 
 function esHoy(dia: string) {
@@ -335,19 +410,25 @@ function Fragmento({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function FilaCarga({ carga: c, recetas }: { carga: Carga; recetas: string[] }) {
+function FilaCarga({
+  carga: c,
+  recetas,
+  atenuada = false,
+}: {
+  carga: Carga;
+  recetas: string[];
+  /** Los días anteriores pesan menos que hoy: es historial, no novedad. */
+  atenuada?: boolean;
+}) {
   const corte = pesosDe(c);
   const pct = porcentajeFacturado(c);
 
   return (
-    <TableRow className={cn(c.estado === 'anulada' && 'text-faint')}>
+    <TableRow className={cn(atenuada && 'text-muted-foreground', c.estado === 'anulada' && 'text-faint')}>
       <TableCell className="num text-muted-foreground text-sm">{hora(c.momento)}</TableCell>
       <TableCell className="num text-sm font-medium">{c.id}</TableCell>
       <TableCell>
-        <span className="flex items-center gap-2">
-          <Muestra receta={c.receta} recetas={recetas} />
-          <span className="num text-sm">{c.receta}</span>
-        </span>
+        <EtiquetaReceta receta={c.receta} recetas={recetas} />
       </TableCell>
       {/* El volumen es lo que la planta produjo: es el número de la fila. */}
       <TableCell className="text-right">
@@ -360,10 +441,12 @@ function FilaCarga({ carga: c, recetas }: { carga: Carga; recetas: string[] }) {
         {corte && pct !== null ? (
           <span className="flex items-center gap-2.5">
             <BarraFiscal blanco={corte.blanco} negro={corte.negro} className="w-16 shrink-0" />
-            <span className="num text-xs">{pct}% en blanco</span>
+            <span className="num text-xs whitespace-nowrap">
+              {pct === 100 ? '100% Blanco' : pct === 0 ? '100% Negro' : `${pct}% B / ${100 - pct}% N`}
+            </span>
           </span>
         ) : (
-          <span className="text-faint text-xs">sin definir</span>
+          <span className="text-faint text-xs italic">Sin asignar</span>
         )}
       </TableCell>
       <TableCell className="text-right">
