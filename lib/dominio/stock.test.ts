@@ -6,6 +6,8 @@ import {
   mermaMedida,
   nivelDeStock,
   sugerenciaDeCompra,
+  cuantoSale,
+  proporcionDeDias,
 } from './stock';
 
 const cemento: Material = {
@@ -112,5 +114,86 @@ describe('mermaMedida', () => {
       { id: '1', material: 'Cemento', fecha: '2026-07-01', declarado: 10_500, calculado: 10_000 },
     ]);
     expect(m?.pct).toBe(0);
+  });
+});
+
+function material(p: Partial<Material>): Material {
+  return {
+    nombre: 'Cemento',
+    restante: 38_200,
+    capacidad: 50_000,
+    unidad: 'kg',
+    consumoDiario: 11_955,
+    ...p,
+  };
+}
+
+describe('cuantoSale', () => {
+  const silos = [
+    material({ nombre: 'Cemento', restante: 38_200 }),
+    material({ nombre: 'Áridos', restante: 462_000, capacidad: 600_000 }),
+    material({ nombre: 'Aditivo', restante: 780, capacidad: 2_000 }),
+    material({ nombre: 'Agua', restante: null, capacidad: null, sinStock: true }),
+  ];
+
+  const H30 = {
+    codigo: 'H-30',
+    dosificacion: [
+      { material: 'Cemento', porM3: 350, unidad: 'kg' },
+      { material: 'Áridos', porM3: 1_900, unidad: 'kg' },
+      { material: 'Agua', porM3: 165, unidad: 'L' },
+      { material: 'Aditivo', porM3: 1.8, unidad: 'kg' },
+    ],
+  };
+
+  it('manda el material que menos da, no el promedio', () => {
+    // Sobran áridos para 243 m³ y aditivo para 433, pero el cemento
+    // alcanza para 109. Salen 109.
+    const r = cuantoSale(H30, silos)!;
+    expect(r.m3).toBe(109);
+    expect(r.frena).toBe('Cemento');
+  });
+
+  it('el agua no frena nada: sale del pozo', () => {
+    const r = cuantoSale(H30, silos)!;
+    expect(r.porMaterial.map((x) => x.material)).not.toContain('Agua');
+  });
+
+  it('un material sin stock deducido tampoco frena', () => {
+    const sinDeducir = silos.map((m) =>
+      m.nombre === 'Cemento' ? { ...m, restante: null } : m,
+    );
+    const r = cuantoSale(H30, sinDeducir)!;
+    expect(r.frena).not.toBe('Cemento');
+  });
+
+  it('sin ningún material medible no inventa un número', () => {
+    expect(cuantoSale(H30, [])).toBeNull();
+  });
+
+  it('redondea para abajo: no se puede hacer medio pastón de más', () => {
+    const r = cuantoSale(
+      { codigo: 'X', dosificacion: [{ material: 'Cemento', porM3: 300, unidad: 'kg' }] },
+      [material({ restante: 1_000 })],
+    )!;
+    expect(r.m3).toBe(3);
+  });
+});
+
+describe('proporcionDeDias', () => {
+  it('el que más aguanta llena la barra y el que menos queda corto', () => {
+    // Con el llenado del silo pasaba al revés: el aditivo va al 39% de
+    // capacidad y es el que MEJOR está.
+    expect(proporcionDeDias(13, 13)).toBe(100);
+    expect(Math.round(proporcionDeDias(3, 13)!)).toBe(23);
+    expect(Math.round(proporcionDeDias(6, 13)!)).toBe(46);
+  });
+
+  it('sin días no hay barra', () => {
+    expect(proporcionDeDias(null, 13)).toBeNull();
+  });
+
+  it('sin máximo con qué comparar tampoco', () => {
+    expect(proporcionDeDias(3, 0)).toBeNull();
   });
 });
