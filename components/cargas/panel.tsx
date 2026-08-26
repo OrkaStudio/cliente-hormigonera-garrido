@@ -215,7 +215,7 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
               <h2 className="font-heading flex items-center gap-2 text-sm font-semibold">
                 <CircleAlert className="text-warn size-4 shrink-0" aria-hidden />
-                Cargas sin cliente ({num(sinCliente.length)})
+                Cargas sin imputar ({num(sinCliente.length)})
               </h2>
               <span className="text-muted-foreground num text-xs">
                 {dec(sinCliente.reduce((a, c) => a + c.m3, 0))} m³ sin imputar
@@ -310,8 +310,8 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
                         repartía 130 px de vacío en cada columna de
                         números y el rótulo quedaba flotando sobre un
                         hueco en vez de sobre su dato. */}
-                    <TableHead className="w-full min-w-40">
-                      <Rotulo>Cliente</Rotulo>
+                    <TableHead className="w-full min-w-44">
+                      <Rotulo>Pedido</Rotulo>
                     </TableHead>
                     <TableHead className="w-24 text-right whitespace-nowrap">
                       <Rotulo>Volumen</Rotulo>
@@ -357,6 +357,7 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
                           carga={c}
                           recetas={d.recetas}
                           nombreCliente={nombreDe(c.clienteId)}
+                          pedidoId={c.pedidoId ?? null}
                           atenuada={!esHoy(grupo.dia)}
                         />
                       ))}
@@ -427,11 +428,13 @@ function FilaCarga({
   carga: c,
   recetas,
   nombreCliente,
+  pedidoId,
   atenuada = false,
 }: {
   carga: Carga;
   recetas: string[];
   nombreCliente: string | null;
+  pedidoId: string | null;
   /** Los días anteriores pesan menos que hoy: es historial, no novedad. */
   atenuada?: boolean;
 }) {
@@ -445,8 +448,15 @@ function FilaCarga({
       <TableCell>
         <EtiquetaReceta receta={c.receta} recetas={recetas} />
       </TableCell>
-      <TableCell className="max-w-0 truncate text-sm">
-        {nombreCliente ?? <span className="text-faint italic">sin asignar</span>}
+      <TableCell className="max-w-0 text-sm">
+        {pedidoId ? (
+          <>
+            <span className="num block truncate">{pedidoId}</span>
+            <span className="text-faint block truncate text-xs">{nombreCliente}</span>
+          </>
+        ) : (
+          <span className="text-faint italic">sin imputar</span>
+        )}
       </TableCell>
       <TableCell className="text-right">
         <Cifra valor={dec(c.m3)} unidad="m³" tamano="sm" />

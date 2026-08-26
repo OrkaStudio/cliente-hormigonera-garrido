@@ -72,6 +72,57 @@ export interface Carga {
   pesadas: PesadaMaterial[];
   /** Valores fuera de rango razonable: se marca, no se rechaza. */
   sospechosa?: boolean;
+  /**
+   * A qué pedido se imputó este pastón.
+   *
+   * El pedido es la unidad comercial y el pastón la técnica: 18 m³ para
+   * un cliente son UN pedido y tres pastones. Sin esto, la app muestra
+   * tres ventas y hay que tipearle el precio a cada una.
+   *
+   * Null mientras nadie lo imputó → decisiones/hormigonera-el-pedido-es-la-venta.
+   */
+  pedidoId?: string | null;
+}
+
+/** Un pedido abierto todavía espera producción; uno completo ya salió entero. */
+export type EstadoPedido = 'abierto' | 'completo' | 'cancelado';
+
+/**
+ * Lo que un cliente encargó.
+ *
+ * Es la unidad COMERCIAL: lo que se acordó por teléfono, con su precio y
+ * su destino. Los pastones que el autómata larga se le imputan encima.
+ *
+ * Nace antes que la producción, no después: por eso tiene `m3` (lo
+ * pedido) y no un total — el total sale de los pastones que efectivamente
+ * salieron.
+ */
+export interface Pedido {
+  /** P-0042. Numeración propia, correlativa. */
+  id: string;
+  clienteId: string;
+  receta: string;
+  /** Cuánto encargó. Lo producido puede ser menos, o un poco más. */
+  m3: number;
+  /**
+   * El precio acordado, congelado.
+   *
+   * Se pacta UNA vez al tomar el pedido y se aplica a todos sus pastones.
+   * Antes había que tipearlo en cada uno — treinta y nueve veces por mes,
+   * y cada tipeo una oportunidad de equivocarse.
+   */
+  precioM3: number;
+  /** Cuándo se tomó el pedido. */
+  creado: string;
+  /**
+   * Adónde va el hormigón. Suele NO ser el domicilio fiscal del cliente:
+   * un corralón factura en su local y recibe en la obra.
+   */
+  obra?: string | null;
+  /** Para cuándo lo quiere. Null si no se acordó fecha. */
+  paraCuando?: string | null;
+  estado: EstadoPedido;
+  notas?: string | null;
 }
 
 export interface Cliente {
