@@ -58,3 +58,7 @@ supabase/.branches/
 # Storybook
 debug-storybook.log
 storybook-static/
+
+# Python
+__pycache__/
+*.pyc

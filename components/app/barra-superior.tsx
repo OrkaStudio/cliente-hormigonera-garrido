@@ -1,4 +1,6 @@
 import Link from 'next/link';
+
+import { Isotipo } from '@/components/marca/isotipo';
 import { cn } from '@/lib/utils';
 import { EMPRESA } from '@/config/empresa';
 
@@ -27,7 +29,8 @@ export function BarraSuperior({ activo = 'Inicio' }: { activo?: string }) {
       <div className="bg-marca h-[3px]" />
 
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-8">
-        <Link href="/" className="flex items-baseline gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5">
+          <Isotipo className="h-7 w-auto shrink-0" />
           <span className="font-heading text-marca text-lg leading-none font-black tracking-tight">
             {EMPRESA.marca}
           </span>
