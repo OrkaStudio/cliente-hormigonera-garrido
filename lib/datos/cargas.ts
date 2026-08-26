@@ -1,4 +1,4 @@
-import { CLIENTES, RECETAS, generarCargas } from './semilla';
+import { CLIENTES, RECETAS, generarCargas, generarPedidos } from './semilla';
 import type { Carga } from './tipos';
 
 /**
@@ -9,7 +9,12 @@ import type { Carga } from './tipos';
  * una carga sin asignar es el sujeto y no una alerta.
  */
 export async function traerCargas(ahora = new Date()) {
-  const todas = generarCargas(ahora);
+  // Las cargas llegan ya imputadas: el pedido es la unidad comercial y
+  // el pastón la técnica → decisiones/hormigonera-el-pedido-es-la-venta
+  const { todas, pedidos } = (() => {
+    const g = generarPedidos(generarCargas(ahora));
+    return { todas: g.cargas, pedidos: g.pedidos };
+  })();
 
   const hoy = ahora.toDateString();
   const delDia = todas.filter((c) => new Date(c.momento).toDateString() === hoy);
@@ -36,6 +41,8 @@ export async function traerCargas(ahora = new Date()) {
      * suyas y tienen que decir su nombre, no su código interno.
      */
     nombresDeCliente: Object.fromEntries(CLIENTES.map((c) => [c.id, c.nombre])),
+    /** A qué pedido pertenece cada pastón, para poder mostrarlo. */
+    pedidosPorId: Object.fromEntries(pedidos.map((p) => [p.id, p])),
     /** En qué orden se le asigna color a cada receta. Fijo, nunca cíclico. */
     recetas: Object.keys(RECETAS),
     /** Las últimas del historial, para ver más atrás sin salir. */

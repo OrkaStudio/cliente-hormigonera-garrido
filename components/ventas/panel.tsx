@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
-import { FileText, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 import { BarraSuperior } from '@/components/app/barra-superior';
-import { BarraFiscal } from '@/components/dominio/barra-fiscal';
 import { Cifra } from '@/components/dominio/cifra';
+import { Estado } from '@/components/dominio/estado';
 import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import { MuestraReceta } from '@/components/dominio/etiqueta-receta';
 import { Input } from '@/components/ui/input';
@@ -19,69 +19,60 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { leerDocumentos } from '@/lib/datos/documentos-locales';
-import type { DatosVentas } from '@/lib/datos/ventas';
-import { agruparPorDia, diaLocal, resumirCargas } from '@/lib/dominio/cargas';
-import type { Documento } from '@/lib/dominio/documentos';
-import { pesosDe, porcentajeFacturado } from '@/lib/dominio/fiscal';
-import { coincideVenta, documentoDe } from '@/lib/dominio/ventas';
-import type { Carga } from '@/lib/datos/tipos';
+import type { DatosVentas, PedidoConAvance } from '@/lib/datos/ventas';
+import { coincidePedido } from '@/lib/dominio/pedidos';
 import { $, dec, fechaLargaDeMomento, hora, num } from '@/lib/formato';
+import { cn } from '@/lib/utils';
 
 /**
- * Apartado 3 — Ventas y documentos.
+ * Apartado 3 — Ventas.
  *
- * Dos cosas gobiernan la pantalla:
+ * Una venta es un PEDIDO, no un pastón. Antes esta pantalla listaba
+ * exactamente las mismas filas que Cargas —siete de ocho columnas
+ * iguales— porque el modelo decía que una carga era una venta. Los datos
+ * lo desmentían: a Obras Monte SA le salieron 18 m³ en tres pastones y
+ * figuraban como tres ventas.
+ * → decisiones/hormigonera-el-pedido-es-la-venta
  *
- *  · **Nada fiscal.** El papel que sale de acá es un comprobante
- *    comercial y lo dice impreso → decisiones/hormigonera-plataforma-sin-fiscal.
- *  · **R5 — blanco y negro nunca se suman sin aclarar.** El corte va
- *    arriba, separado, antes que cualquier otra cosa. Es la razón de ser
- *    del apartado: hoy José y su socio lo sacaban a mano.
+ * Nada fiscal: los papeles que salen de acá son comprobantes comerciales
+ * → decisiones/hormigonera-plataforma-sin-fiscal
  */
 export function PanelVentas({ datos: d }: { datos: DatosVentas }) {
-  const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [busqueda, setBusqueda] = useState('');
-  const [dia, setDia] = useState('todos');
+  const [estado, setEstado] = useState<'todos' | 'abierto' | 'completo'>('todos');
 
-  // Los papeles viven en el navegador que los emitió: no existen en el
-  // servidor y por eso se leen después de montar.
-  useEffect(() => setDocumentos(leerDocumentos()), []);
-
-  const nombreDe = (id: string | null) => (id ? (d.nombresDeCliente[id] ?? id) : null);
-
-  const total = useMemo(() => resumirCargas(d.ventas), [d.ventas]);
-
-  const opcionesDeDia = useMemo(
+  const visibles = useMemo(
     () =>
-      agruparPorDia(d.ventas).map((g) => ({
-        valor: g.dia,
-        etiqueta: esHoy(g.dia) ? 'Hoy' : fechaLargaDeMomento(g.momento),
-      })),
-    [d.ventas],
-  );
-
-  const dias = useMemo(
-    () =>
-      agruparPorDia(
-        d.ventas.filter(
-          (v) =>
-            coincideVenta(v, nombreDe(v.clienteId), documentoDe(v.id, documentos), busqueda) &&
-            (dia === 'todos' || diaLocal(v.momento) === dia),
-        ),
+      d.pedidos.filter(
+        (p) =>
+          coincidePedido(p, p.clienteNombre, busqueda) &&
+          (estado === 'todos' || p.estadoReal === estado),
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [d.ventas, documentos, busqueda, dia],
+    [d.pedidos, busqueda, estado],
   );
 
-  const hayFiltro = busqueda.trim() !== '' || dia !== 'todos';
+  const abiertos = d.pedidos.filter((p) => p.estadoReal === 'abierto');
 
-  /* Un mes son veinte y pico de días de producción. Se ven los primeros
-     y el resto está a un clic: la pregunta que trae José es del mes,
-     pero la fila que busca es de esta semana. */
-  const [todosLosDias, setTodosLosDias] = useState(false);
-  const visibles = hayFiltro || todosLosDias ? dias : dias.slice(0, DIAS_A_LA_VISTA);
-  const restantes = dias.length - visibles.length;
+  const total = useMemo(
+    () => ({
+      pedido: d.pedidos.reduce((a, p) => a + p.m3, 0),
+      producido: d.pedidos.reduce((a, p) => a + p.avance.producido, 0),
+      facturado: d.pedidos.reduce((a, p) => a + p.avance.total, 0),
+      pendiente: abiertos.reduce((a, p) => a + p.avance.pendiente, 0),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [d.pedidos],
+  );
+
+  const hayFiltro = busqueda.trim() !== '' || estado !== 'todos';
+
+  /* Un mes son cien y pico de pedidos. Se ven los más nuevos —donde
+     están los abiertos, que son los que piden acción— y el resto está a
+     un clic. Con un filtro puesto se muestran todos: si alguien buscó,
+     quiere ver lo que encontró. */
+  const [todos, setTodos] = useState(false);
+  const enPantalla = hayFiltro || todos ? visibles : visibles.slice(0, A_LA_VISTA);
+  const restantes = visibles.length - enPantalla.length;
 
   return (
     <>
@@ -92,78 +83,60 @@ export function PanelVentas({ datos: d }: { datos: DatosVentas }) {
           Ventas
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Cada carga con cliente y precio, y el papel que le corresponde. Desde el{' '}
+          Lo que cada cliente encargó, y cuánto de eso ya salió de la planta. Desde el{' '}
           {fechaLargaDeMomento(d.desde)}.
         </p>
 
-        {/* La leyenda que gobierna todo el apartado. No es letra chica:
-            si alguien confunde esto con una factura, el problema es
-            nuestro. */}
         <p className="border-line bg-sunk text-muted-foreground mt-4 rounded-lg border border-dashed px-4 py-2.5 text-xs">
-          Los papeles de acá son <span className="text-ink">comprobantes comerciales</span>, no
-          facturas: la plataforma no emite nada fiscal ni se conecta con ARCA. Lo que sí hace
-          es mostrar separado lo que va en blanco de lo que va en negro.
+          Un pedido es <span className="text-ink">una venta</span>, aunque salga en varios
+          pastones: 18 m³ para un cliente son un pedido y tres cargas. El precio se acuerda una
+          vez, al tomarlo.
         </p>
 
-        {/* R5 — el corte, antes que nada. */}
-        <section className="mt-5 grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
-          <div className="border-line bg-card shadow-tarjeta rounded-lg border p-4 lg:w-64">
-            <p className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
-              Total facturado
-            </p>
-            <div className="mt-1.5">
-              <Cifra valor={$(total.facturado)} tamano="lg" />
-            </div>
+        <section className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Dato rotulo="Pedidos">
+            <Cifra valor={num(d.pedidos.length)} tamano="lg" />
             <p className="text-faint mt-1 text-xs">
-              {num(total.cargas)} {total.cargas === 1 ? 'venta' : 'ventas'} ·{' '}
-              {dec(total.m3)} m³
-              {d.sinAsignar > 0 && (
+              {num(abiertos.length)} {abiertos.length === 1 ? 'abierto' : 'abiertos'}
+            </p>
+          </Dato>
+
+          <Dato rotulo="Encargado">
+            <Cifra valor={dec(total.pedido)} unidad="m³" tamano="lg" />
+            <p className="text-faint mt-1 text-xs">
+              salieron <span className="num">{dec(total.producido)}</span> m³
+            </p>
+          </Dato>
+
+          <Dato rotulo="Falta producir">
+            <Cifra
+              valor={dec(total.pendiente)}
+              unidad="m³"
+              tamano="lg"
+              tono={total.pendiente > 0 ? 'warn' : 'neutro'}
+            />
+            <p className="text-faint mt-1 text-xs">
+              {abiertos.length === 0 ? 'todo entregado' : 'en pedidos abiertos'}
+            </p>
+          </Dato>
+
+          <Dato rotulo="Facturado">
+            <Cifra valor={$(total.facturado)} tamano="lg" />
+            <p className="text-faint mt-1 text-xs">
+              por lo producido, no por lo pedido
+              {d.sinImputar > 0 && (
                 <>
                   {' · '}
                   <Link
                     href="/cargas"
                     className="text-warn-text underline-offset-2 hover:underline"
                   >
-                    {num(d.sinAsignar)} sin asignar
+                    {num(d.sinImputar)} sin imputar
                   </Link>
                 </>
               )}
             </p>
-          </div>
-
-          <div className="border-line bg-card shadow-tarjeta rounded-lg border p-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <p className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
-                Blanco y negro
-              </p>
-              {total.pctBlanco !== null && (
-                <p className="flex flex-wrap items-center gap-x-4 text-xs">
-                  <span className="flex items-center gap-1.5">
-                    <span className="border-line bg-paper inline-block size-2.5 rounded-[3px] border" />
-                    <span className="num">{total.pctBlanco.toFixed(0)}%</span> blanco
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="bg-ink inline-block size-2.5 rounded-[3px]" />
-                    <span className="num">{(100 - total.pctBlanco).toFixed(0)}%</span> negro
-                  </span>
-                </p>
-              )}
-            </div>
-
-            {total.pctBlanco === null ? (
-              <p className="text-faint mt-3 text-sm">
-                Ninguna venta tiene el corte definido todavía.
-              </p>
-            ) : (
-              <>
-                <BarraFiscal blanco={total.blanco} negro={total.negro} className="mt-3 h-3" />
-                <p className="num mt-2 flex justify-between text-sm">
-                  <span>{$(total.blanco)}</span>
-                  <span>{$(total.negro)}</span>
-                </p>
-              </>
-            )}
-          </div>
+          </Dato>
         </section>
 
         <section className="border-line bg-card shadow-tarjeta mt-4 overflow-hidden rounded-lg border">
@@ -178,37 +151,34 @@ export function PanelVentas({ datos: d }: { datos: DatosVentas }) {
                   id="buscar"
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
-                  placeholder="Carga, cliente o documento"
+                  placeholder="Pedido, cliente u obra"
                   className="h-9 w-full pl-8 sm:w-64"
                 />
               </span>
             </Filtro>
 
-            <Filtro rotulo="Día" htmlFor="dia">
+            <Filtro rotulo="Estado" htmlFor="estado">
               <select
-                id="dia"
-                value={dia}
-                onChange={(e) => setDia(e.target.value)}
+                id="estado"
+                value={estado}
+                onChange={(e) => setEstado(e.target.value as typeof estado)}
                 className="border-line bg-card focus-visible:ring-ring/50 h-9 rounded-md border px-2.5 text-sm focus-visible:ring-2 focus-visible:outline-none"
               >
                 <option value="todos">Todos</option>
-                {opcionesDeDia.map((o) => (
-                  <option key={o.valor} value={o.valor}>
-                    {o.etiqueta}
-                  </option>
-                ))}
+                <option value="abierto">Abiertos</option>
+                <option value="completo">Completos</option>
               </select>
             </Filtro>
           </div>
 
-          {dias.length === 0 ? (
+          {visibles.length === 0 ? (
             <EstadoVacio
               className="m-4"
-              titulo={hayFiltro ? 'Ninguna venta coincide' : 'Todavía no hay ventas'}
+              titulo={hayFiltro ? 'Ningún pedido coincide' : 'Todavía no hay pedidos'}
               descripcion={
                 hayFiltro
-                  ? 'Probá con otro número de carga, otro cliente o sacá el filtro de día.'
-                  : 'Una carga se convierte en venta cuando se le asigna cliente y precio, en el apartado de Cargas.'
+                  ? 'Probá con otro número, otro cliente o sacá el filtro de estado.'
+                  : 'Un pedido se toma cuando el cliente llama, antes de que la planta produzca.'
               }
             />
           ) : (
@@ -216,61 +186,32 @@ export function PanelVentas({ datos: d }: { datos: DatosVentas }) {
               <Table>
                 <TableHeader className="bg-sunk">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-20">
-                      <Rotulo>Hora</Rotulo>
-                    </TableHead>
                     <TableHead className="w-24">
-                      <Rotulo>Carga</Rotulo>
-                    </TableHead>
-                    <TableHead className="w-24">
-                      <Rotulo>Receta</Rotulo>
+                      <Rotulo>Pedido</Rotulo>
                     </TableHead>
                     <TableHead className="w-full min-w-40">
                       <Rotulo>Cliente</Rotulo>
                     </TableHead>
-                    <TableHead className="w-24 text-right whitespace-nowrap">
-                      <Rotulo>Volumen</Rotulo>
+                    <TableHead className="w-24">
+                      <Rotulo>Receta</Rotulo>
+                    </TableHead>
+                    <TableHead className="w-52 text-center whitespace-nowrap">
+                      <Rotulo>Producido</Rotulo>
                     </TableHead>
                     <TableHead className="w-28 text-right whitespace-nowrap">
-                      <Rotulo>Monto</Rotulo>
+                      <Rotulo>Precio /m³</Rotulo>
                     </TableHead>
-                    <TableHead className="w-36 text-center whitespace-nowrap">
-                      <Rotulo>En blanco</Rotulo>
+                    <TableHead className="w-32 text-right whitespace-nowrap">
+                      <Rotulo>A cobrar</Rotulo>
                     </TableHead>
-                    <TableHead className="w-40 text-right whitespace-nowrap">
-                      <Rotulo>Documento</Rotulo>
+                    <TableHead className="w-28 text-right">
+                      <Rotulo>Estado</Rotulo>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {visibles.map((grupo, i) => (
-                    <Grupo key={grupo.dia}>
-                      <TableRow className="bg-sunk/60 hover:bg-sunk/60">
-                        <TableCell colSpan={8} className="py-2">
-                          <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
-                            <span className="font-medium">
-                              {i === 0 && esHoy(grupo.dia)
-                                ? 'Hoy'
-                                : fechaLargaDeMomento(grupo.momento)}
-                            </span>
-                            <span className="text-muted-foreground num text-xs">
-                              {num(grupo.resumen.cargas)}{' '}
-                              {grupo.resumen.cargas === 1 ? 'venta' : 'ventas'} ·{' '}
-                              {dec(grupo.resumen.m3)} m³ · {$(grupo.resumen.facturado)}
-                            </span>
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                      {grupo.cargas.map((v) => (
-                        <FilaVenta
-                          key={v.id}
-                          venta={v}
-                          nombreCliente={nombreDe(v.clienteId)}
-                          documento={documentoDe(v.id, documentos)}
-                          recetas={RECETAS}
-                        />
-                      ))}
-                    </Grupo>
+                  {enPantalla.map((p) => (
+                    <FilaPedido key={p.id} pedido={p} />
                   ))}
                 </TableBody>
               </Table>
@@ -280,28 +221,43 @@ export function PanelVentas({ datos: d }: { datos: DatosVentas }) {
           {restantes > 0 && (
             <button
               type="button"
-              onClick={() => setTodosLosDias(true)}
+              onClick={() => setTodos(true)}
               className="border-line text-muted-foreground hover:text-ink hover:bg-sunk focus-visible:ring-ring/50 w-full border-t py-2.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:-outline-offset-2"
             >
-              Ver {restantes === 1 ? 'el día anterior' : `los ${num(restantes)} días anteriores`}
+              Ver {restantes === 1 ? 'el pedido anterior' : `los ${num(restantes)} pedidos anteriores`}
             </button>
           )}
         </section>
 
         <p className="text-faint mt-2 text-xs">
-          Los papeles emitidos viven en el navegador que los emitió: hasta que exista la base
-          de datos, un remito hecho en otra computadora no se ve acá.
+          Los pastones se imputan al pedido desde{' '}
+          <Link href="/cargas" className="underline-offset-2 hover:underline">
+            Cargas
+          </Link>
+          . El registro que llega del autómata trae receta, volumen y hora, pero{' '}
+          <span className="text-ink-soft">no trae el pedido</span>: hasta que eso se resuelva
+          con el integrador, la imputación es a mano.
         </p>
       </main>
     </>
   );
 }
 
-/** Las tres del producto, en orden fijo para el color. */
 const RECETAS = ['H-21', 'H-25', 'H-30'];
 
-/** Cuántos días se ven sin desplegar. */
-const DIAS_A_LA_VISTA = 7;
+/** Cuántos pedidos se ven sin desplegar. */
+const A_LA_VISTA = 25;
+
+function Dato({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return (
+    <div className="border-line bg-card shadow-tarjeta rounded-lg border p-4">
+      <p className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
+        {rotulo}
+      </p>
+      <div className="mt-1.5">{children}</div>
+    </div>
+  );
+}
 
 function Rotulo({ children }: { children: React.ReactNode }) {
   return (
@@ -333,77 +289,64 @@ function Filtro({
   );
 }
 
-/** Sin `<>` para poder llevar key en un grupo de filas de tabla. */
-function Grupo({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
-}
-
-function esHoy(dia: string) {
-  return dia === diaLocal(new Date().toISOString());
-}
-
-function FilaVenta({
-  venta: v,
-  nombreCliente,
-  documento,
-  recetas,
-}: {
-  venta: Carga;
-  nombreCliente: string | null;
-  documento: Documento | null;
-  recetas: string[];
-}) {
-  const corte = pesosDe(v);
-  const pct = porcentajeFacturado(v);
+function FilaPedido({ pedido: p }: { pedido: PedidoConAvance }) {
+  const { avance } = p;
 
   return (
-    <TableRow>
-      <TableCell className="num text-muted-foreground text-sm">{hora(v.momento)}</TableCell>
-      <TableCell className="num text-sm font-medium">{v.id}</TableCell>
+    <TableRow className="group relative cursor-pointer">
+      <TableCell>
+        {/* Toda la fila entra al cliente: el link se estira con ::after
+            para que ctrl+click siga abriendo en pestaña nueva. */}
+        <Link
+          href={`/clientes/${p.clienteId}` as Route}
+          className="num text-sm font-medium underline-offset-4 group-hover:underline after:absolute after:inset-0 after:content-['']"
+        >
+          {p.id}
+        </Link>
+        <span className="text-faint num mt-0.5 block text-xs">{hora(p.creado)}</span>
+      </TableCell>
+      <TableCell className="max-w-0 truncate text-sm">
+        {p.clienteNombre}
+        {p.obra && <span className="text-faint block truncate text-xs">{p.obra}</span>}
+      </TableCell>
       <TableCell>
         <span className="flex items-center gap-2">
-          <MuestraReceta receta={v.receta} recetas={recetas} />
-          <span className="num text-sm">{v.receta}</span>
+          <MuestraReceta receta={p.receta} recetas={RECETAS} />
+          <span className="num text-sm">{p.receta}</span>
         </span>
       </TableCell>
-      <TableCell className="max-w-0 truncate text-sm">{nombreCliente ?? '—'}</TableCell>
-      <TableCell className="text-right">
-        <Cifra valor={dec(v.m3)} unidad="m³" tamano="sm" />
-      </TableCell>
-      <TableCell className="num text-right text-sm">{$(v.total)}</TableCell>
+      {/* Lo producido contra lo pedido: es la pregunta de la pantalla. */}
       <TableCell>
-        {corte && pct !== null ? (
-          <span
-            className="flex items-center justify-center gap-2.5"
-            title={`${$(corte.blanco)} facturado de ${$(v.total)}`}
-          >
-            <span className="num w-9 shrink-0 text-right text-xs">{pct}%</span>
-            <BarraFiscal blanco={corte.blanco} negro={corte.negro} className="w-16 shrink-0" />
+        <span className="flex items-center justify-center gap-2.5">
+          <span className="num w-28 shrink-0 text-right text-xs whitespace-nowrap">
+            {dec(avance.producido)} / {dec(p.m3)}
+            <span className="text-faint ml-0.5">m³</span>
           </span>
-        ) : (
-          <span className="text-faint block text-center text-xs italic">sin definir</span>
-        )}
+          <span className="bg-sunk relative h-1.5 w-16 shrink-0 overflow-hidden rounded-full">
+            <span
+              className={cn(
+                'absolute inset-y-0 left-0 rounded-full',
+                avance.pendiente > 0 ? 'bg-warn' : 'bg-ok',
+              )}
+              style={{ width: `${Math.max(avance.pct, 2)}%` }}
+            />
+          </span>
+        </span>
       </TableCell>
-      {/* Un solo lugar dice las dos cosas: si el papel existe, su número;
-          si no, el camino para emitirlo. El emisor ya está construido y
-          vive en el perfil del cliente — acá va el punto de entrada. */}
+      <TableCell className="num text-right text-sm">{$(p.precioM3)}</TableCell>
+      <TableCell className="num text-right text-sm">{$(avance.total)}</TableCell>
       <TableCell className="text-right">
-        {documento ? (
-          <Link
-            href={`/documentos/${documento.numero}` as Route}
-            className="border-ok/40 text-ok-text hover:bg-ok-soft num inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs whitespace-nowrap transition-colors"
-          >
-            <FileText className="size-3 shrink-0" aria-hidden />
-            {documento.numero}
-          </Link>
-        ) : (
-          <Link
-            href={`/clientes/${v.clienteId}/emitir?tipo=remito&carga=${v.id}` as Route}
-            className="border-line text-muted-foreground hover:text-ink hover:bg-sunk inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-colors"
-          >
-            Emitir
-          </Link>
-        )}
+        <span className="relative z-10">
+          {p.estadoReal === 'cancelado' ? (
+            <Estado tono="danger">Cancelado</Estado>
+          ) : p.estadoReal === 'completo' ? (
+            <Estado tono="ok">Completo</Estado>
+          ) : (
+            <Estado tono="warn">
+              faltan {dec(avance.pendiente)} m³
+            </Estado>
+          )}
+        </span>
       </TableCell>
     </TableRow>
   );
