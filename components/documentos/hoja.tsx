@@ -1,4 +1,3 @@
-import { Isotipo } from '@/components/marca/isotipo';
 import { EMPRESA, LEYENDA_NO_FISCAL } from '@/config/empresa';
 import { ROTULO, totalDe, type Documento } from '@/lib/dominio/documentos';
 import { $, dec, fechaDeDocumento } from '@/lib/formato';
@@ -49,7 +48,7 @@ export function HojaDocumento({
           {/* En el papel el logo tiene lugar de sobra, asi que va mas grande
               que en la barra: es lo que hace que el remito parezca emitido
               por una empresa y no por una planilla. */}
-          <Isotipo className="h-12 w-auto shrink-0" />
+          <img src="/marca/isotipo.svg" alt="" className="h-12 w-auto shrink-0" />
           <div>
           <p className="text-marca font-heading text-xl font-black tracking-tight">
             {EMPRESA.marca}

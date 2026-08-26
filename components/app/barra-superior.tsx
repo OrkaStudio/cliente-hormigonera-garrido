@@ -1,6 +1,4 @@
 import Link from 'next/link';
-
-import { Isotipo } from '@/components/marca/isotipo';
 import { cn } from '@/lib/utils';
 import { EMPRESA } from '@/config/empresa';
 
@@ -30,7 +28,10 @@ export function BarraSuperior({ activo = 'Inicio' }: { activo?: string }) {
 
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <Isotipo className="h-7 w-auto shrink-0" />
+          {/* Va como <img> y no inline: el trazado pesa 76 KB y meterlo en
+              el arbol de React lo manda en el payload de CADA pagina. Asi
+              es un pedido solo, cacheado, y comprimido son 25 KB. */}
+          <img src="/marca/isotipo.svg" alt="" className="h-7 w-auto shrink-0" />
           <span className="font-heading text-marca text-lg leading-none font-black tracking-tight">
             {EMPRESA.marca}
           </span>
