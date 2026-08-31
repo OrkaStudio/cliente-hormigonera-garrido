@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CircleAlert, Search } from 'lucide-react';
 
 import { BarraSuperior } from '@/components/app/barra-superior';
-import { AsignarCargas } from '@/components/app/asignar-cargas';
+import { ImputarCargas } from '@/components/cargas/imputar';
 import { BarraFiscal } from '@/components/dominio/barra-fiscal';
 import { Cifra } from '@/components/dominio/cifra';
 import { Estado } from '@/components/dominio/estado';
@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { asignarLocal, aplicarAsignaciones, leerAsignaciones } from '@/lib/datos/cargas-locales';
+import { aplicarAsignaciones, imputarLocal, leerAsignaciones } from '@/lib/datos/cargas-locales';
 import type { DatosCargas } from '@/lib/datos/cargas';
 import {
   agruparPorDia,
@@ -35,7 +35,7 @@ import {
   resumirCargas,
 } from '@/lib/dominio/cargas';
 import { pesosDe, porcentajeFacturado } from '@/lib/dominio/fiscal';
-import type { Carga } from '@/lib/datos/tipos';
+import type { Carga, Pedido } from '@/lib/datos/tipos';
 import { $, dec, fechaLargaDeMomento, hora, num } from '@/lib/formato';
 import { cn } from '@/lib/utils';
 
@@ -74,11 +74,22 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
     setSinCliente(conAsignaciones.filter((c) => !c.clienteId && c.estado !== 'anulada'));
   }, [d.delDia]);
 
-  function asignar(cargaId: string, clienteId: string, total: number) {
-    asignarLocal(cargaId, clienteId, total);
-    setSinCliente((prev) => prev.filter((c) => c.id !== cargaId));
+  /**
+   * Imputar el pastón a un pedido.
+   *
+   * El cliente y el precio no se eligen: vienen del pedido. Antes había
+   * que elegir cliente y tipear el monto en cada uno.
+   */
+  function imputar(carga: Carga, pedido: Pedido) {
+    imputarLocal(carga, pedido);
+    const total = Math.round(carga.m3 * pedido.precioM3);
+    setSinCliente((prev) => prev.filter((c) => c.id !== carga.id));
     setDelDia((prev) =>
-      prev.map((c) => (c.id === cargaId ? { ...c, clienteId, total, estado: 'asignada' } : c)),
+      prev.map((c) =>
+        c.id === carga.id
+          ? { ...c, clienteId: pedido.clienteId, total, estado: 'asignada', pedidoId: pedido.id }
+          : c,
+      ),
     );
     router.refresh();
   }
@@ -126,7 +137,7 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
           Cargas
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Las escribe el autómata. Acá se les pone cliente.
+          Cada pastón que largó el autómata, y a qué pedido se imputó.
         </p>
 
         {/* El día de un vistazo. Cuánto, de qué, y cuánto se facturó —
@@ -223,12 +234,13 @@ export function PanelCargas({ datos: d }: { datos: DatosCargas }) {
             </div>
 
             <div className="mt-3">
-              <AsignarCargas
+              <ImputarCargas
                 cargas={sinCliente}
-                clientes={d.clientes}
-                onAsignar={asignar}
-                formato="detallada"
+                pedidos={d.pedidosAbiertos}
+                todasLasCargas={delDia}
+                nombresDeCliente={d.nombresDeCliente}
                 recetas={d.recetas}
+                onImputar={imputar}
               />
             </div>
           </section>
