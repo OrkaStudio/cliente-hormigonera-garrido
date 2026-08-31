@@ -28,6 +28,15 @@ export interface AsignacionLocal {
   total: number;
   /** Cuando se asigno, para poder auditar el andamio si algo no cierra. */
   momento: string;
+  /**
+   * A que pedido se imputo el paston.
+   *
+   * Cuando viene, el cliente y el precio NO se eligen: salen del pedido.
+   * Ese es el punto del modelo — el precio se acuerda una vez, al tomar
+   * el pedido, y no se tipea en cada paston
+   * → decisiones/hormigonera-el-pedido-es-la-venta
+   */
+  pedidoId?: string;
 }
 
 export type Asignaciones = Record<string, AsignacionLocal>;
@@ -43,13 +52,29 @@ export function leerAsignaciones(): Asignaciones {
   }
 }
 
-export function asignarLocal(cargaId: string, clienteId: string, total: number) {
+export function asignarLocal(
+  cargaId: string,
+  clienteId: string,
+  total: number,
+  pedidoId?: string,
+) {
   const actual = leerAsignaciones();
   const proximo: Asignaciones = {
     ...actual,
-    [cargaId]: { clienteId, total, momento: new Date().toISOString() },
+    [cargaId]: { clienteId, total, momento: new Date().toISOString(), pedidoId },
   };
   window.localStorage.setItem(CLAVE, JSON.stringify(proximo));
+}
+
+/**
+ * Imputar un paston a un pedido.
+ *
+ * El cliente y el precio no se piden: vienen del pedido. Antes habia que
+ * elegir cliente Y tipear el monto en cada paston — treinta y nueve
+ * veces por mes, y cada tipeo una oportunidad de equivocarse.
+ */
+export function imputarLocal(carga: Carga, pedido: { id: string; clienteId: string; precioM3: number }) {
+  asignarLocal(carga.id, pedido.clienteId, Math.round(carga.m3 * pedido.precioM3), pedido.id);
 }
 
 export function desasignarLocal(cargaId: string) {
@@ -73,6 +98,12 @@ export function aplicarAsignaciones(cargas: Carga[], asignaciones: Asignaciones)
   return cargas.map((c) => {
     const a = asignaciones[c.id];
     if (!a || c.clienteId) return c;
-    return { ...c, clienteId: a.clienteId, total: a.total, estado: 'asignada' as const };
+    return {
+      ...c,
+      clienteId: a.clienteId,
+      total: a.total,
+      estado: 'asignada' as const,
+      pedidoId: a.pedidoId ?? null,
+    };
   });
 }

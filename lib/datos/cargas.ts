@@ -1,4 +1,5 @@
 import { CLIENTES, RECETAS, generarCargas, generarPedidos } from './semilla';
+import { avanceDe } from '@/lib/dominio/pedidos';
 import type { Carga } from './tipos';
 
 /**
@@ -43,6 +44,16 @@ export async function traerCargas(ahora = new Date()) {
     nombresDeCliente: Object.fromEntries(CLIENTES.map((c) => [c.id, c.nombre])),
     /** A qué pedido pertenece cada pastón, para poder mostrarlo. */
     pedidosPorId: Object.fromEntries(pedidos.map((p) => [p.id, p])),
+    /**
+     * Los que de verdad esperan producción, para poder imputarles un
+     * pastón.
+     *
+     * El pendiente se calcula contra TODAS las cargas, no contra las del
+     * día: mirando sólo hoy, un pedido de la semana pasada parece tener
+     * todo su volumen sin producir y aparece como candidato. Eso ofrecía
+     * ciento sesenta y dos pedidos abiertos donde hay cuatro.
+     */
+    pedidosAbiertos: pedidos.filter((p) => avanceDe(p, todas).pendiente > 0),
     /** En qué orden se le asigna color a cada receta. Fijo, nunca cíclico. */
     recetas: Object.keys(RECETAS),
     /** Las últimas del historial, para ver más atrás sin salir. */
