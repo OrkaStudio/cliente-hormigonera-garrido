@@ -1,59 +1,80 @@
-import { CLIENTES, generarCargas, generarPedidos } from './semilla';
-import { avanceDe, estadoDe } from '@/lib/dominio/pedidos';
-import type { Carga, Pedido } from './tipos';
+import { CLIENTES, RECETAS, generarCargas } from './semilla';
+import { agruparEnVentas } from '@/lib/dominio/ventas';
+import type { Carga } from './tipos';
 
 /**
- * Las consultas de Ventas — apartado 3.
+ * La consulta de la pantalla de Ventas — apartados 2 y 3, unificados.
  *
- * Una VENTA es un PEDIDO, no un pastón. 18 m³ para un cliente son un
- * pedido y tres pastones; antes la pantalla mostraba tres ventas y había
- * que tipearle el precio a cada una
- * → decisiones/hormigonera-el-pedido-es-la-venta
+ * Antes eran dos: Cargas listaba pastones y Ventas listaba lo mismo
+ * agrupado, así que las dos contestaban la misma pregunta con distinto
+ * nivel de zoom. Ahora hay una sola pantalla: la venta es el renglón y
+ * el pastón es su detalle → decisiones/hormigonera-la-venta-es-el-dia
+ *
+ * No hay pedido pendiente entre jornadas: se produce y se despacha el
+ * mismo día. Una venta es lo que ya salió, no lo que se prometió.
  */
-
-export interface PedidoConAvance extends Pedido {
-  clienteNombre: string;
-  /** El estado se deriva de lo producido: guardarlo lo desincroniza. */
-  estadoReal: Pedido['estado'];
-  avance: ReturnType<typeof avanceDe>;
-}
-
 export async function traerVentas(ahora = new Date()) {
-  const { pedidos, cargas } = generarPedidos(generarCargas(ahora));
+  const todas = generarCargas(ahora);
 
   /*
-   * El mes en curso. Sin el corte son cien y pico de días de historia, y
-   * el mes es además el período del corte blanco/negro — lo que se mira
-   * para decidir, no el acumulado desde que arrancó la planta.
+   * Los últimos treinta días, y NO el mes calendario.
+   *
+   * Con el mes en curso la pantalla queda vacía cada día 1: el primero
+   * de septiembre mostraba cuatro ventas de las ciento veintisiete que
+   * había. Una ventana que se corre siempre muestra lo mismo, cualquier
+   * día que se entre.
    */
-  const desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+  const desde = new Date(ahora);
+  desde.setDate(desde.getDate() - 30);
+  const delPeriodo = todas.filter((c) => new Date(c.momento) >= desde);
+  const hoy = ahora.toDateString();
+  const delDia = todas.filter((c) => new Date(c.momento).toDateString() === hoy);
 
-  const nombres = Object.fromEntries(CLIENTES.map((c) => [c.id, c.nombre]));
+  /*
+   * Lo que hay que hacer: pastones producidos que todavía no son de
+   * nadie. Se muestran de HOY para atrás sin cortar por mes — una carga
+   * del 31 sin asignar no puede desaparecer el día 1 (R4 del apartado 2).
+   */
+  const sinAsignar = todas.filter((c) => !c.clienteId && c.estado !== 'anulada');
 
-  const delMes: PedidoConAvance[] = pedidos
-    .filter((p) => new Date(p.creado) >= desde)
-    .map((p) => ({
-      ...p,
-      clienteNombre: nombres[p.clienteId] ?? p.clienteId,
-      estadoReal: estadoDe(p, cargas),
-      avance: avanceDe(p, cargas),
-    }))
-    .sort((a, b) => b.creado.localeCompare(a.creado));
+  /**
+   * El último precio que se le cobró a cada cliente, para proponerlo al
+   * asignar. No es una lista de precios: es lo que pagó la última vez.
+   * El número se congela en la venta igual → R2 del apartado 2.
+   */
+  const ultimoPrecio: Record<string, number> = {};
+  for (const c of [...todas].sort((a, b) => a.momento.localeCompare(b.momento))) {
+    if (c.clienteId && c.precioM3) ultimoPrecio[c.clienteId] = c.precioM3;
+  }
 
   return {
     ahora,
     /** Desde cuándo se está contando. La pantalla tiene que decirlo. */
     desde: desde.toISOString(),
-    pedidos: delMes,
+    ventas: agruparEnVentas(delPeriodo),
+    sinAsignar: [...sinAsignar].reverse() as Carga[],
+    /** El día, que es la unidad real de trabajo de la planta. */
+    hoy: {
+      cargas: delDia.filter((c) => c.estado !== 'anulada').length,
+      m3: delDia.reduce((a, c) => a + (c.estado === 'anulada' ? 0 : c.m3), 0),
+      total: delDia.reduce((a, c) => a + c.total, 0),
+    },
+    /** A quién SE PUEDE asignar: sólo los activos. */
+    clientes: CLIENTES.filter((c) => c.activo).map((c) => ({
+      id: c.id,
+      nombre: c.nombre,
+      generico: c.generico ?? false,
+    })),
     /**
-     * Pastones producidos que nadie imputó a un pedido. No son ventas
-     * todavía, pero son la razón por la que el total de acá no cuadra
-     * con la producción.
+     * Cómo se llama el que YA está asignado — todos, incluidos los dados
+     * de baja. No es la misma lista: un cliente inactivo no aparece para
+     * asignarle una carga nueva, pero sus ventas viejas siguen siendo
+     * suyas y tienen que decir su nombre, no su código interno.
      */
-    sinImputar: cargas.filter(
-      (c) => !c.pedidoId && c.estado !== 'anulada' && new Date(c.momento) >= desde,
-    ).length,
-    nombresDeCliente: nombres,
+    nombresDeCliente: Object.fromEntries(CLIENTES.map((c) => [c.id, c.nombre])),
+    ultimoPrecio,
+    /** En qué orden se le asigna color a cada receta. Fijo, nunca cíclico. */
+    recetas: Object.keys(RECETAS),
   };
 }
 

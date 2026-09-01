@@ -1,4 +1,4 @@
-import type { Carga, Cliente, Material, Pedido } from './tipos';
+import type { Carga, Cliente, Material } from './tipos';
 
 /**
  * Datos sembrados.
@@ -401,72 +401,3 @@ export function precioSugerido(receta: string, m3: number): number {
   return r ? Math.round(r.precio * m3) : 0;
 }
 
-/**
- * Los pedidos, derivados de lo que la planta produjo.
- *
- * No se inventan: se DEDUCEN de las cargas. Los pastones del mismo
- * cliente, la misma receta y el mismo día son un pedido — que es
- * exactamente lo que pasa en la realidad y lo que la app venía mostrando
- * como ventas separadas. A Obras Monte SA le salieron 18 m³ en tres
- * pastones y figuraban como tres ventas con el precio tipeado tres
- * veces → decisiones/hormigonera-el-pedido-es-la-venta
- *
- * Devuelve las cargas ya imputadas: el `pedidoId` se pone acá y no en
- * `generarCargas` porque el pedido sólo se puede armar mirando el
- * conjunto, no una carga sola.
- *
- * Las cargas sin cliente quedan SIN imputar, y está bien: todavía no son
- * ventas de nadie.
- */
-export function generarPedidos(cargas: Carga[]): { pedidos: Pedido[]; cargas: Carga[] } {
-  const hoy = new Date().toDateString();
-  const grupos = new Map<string, Carga[]>();
-
-  for (const c of cargas) {
-    if (!c.clienteId) continue;
-    const dia = new Date(c.momento).toDateString();
-    const clave = `${dia}|${c.clienteId}|${c.receta}`;
-    grupos.set(clave, [...(grupos.get(clave) ?? []), c]);
-  }
-
-  const pedidos: Pedido[] = [];
-  const imputadas = new Map<string, string>();
-
-  // Por fecha, para que el correlativo del pedido siga al calendario.
-  const ordenados = [...grupos.entries()].sort((a, b) =>
-    a[1][0]!.momento.localeCompare(b[1][0]!.momento),
-  );
-
-  for (const [, suyas] of ordenados) {
-    const primera = suyas[0]!;
-    const producido = suyas.reduce((a, c) => a + c.m3, 0);
-    const esDeHoy = new Date(primera.momento).toDateString() === hoy;
-
-    /*
-     * Los de hoy piden un pastón más de lo que ya salió.
-     *
-     * Sin esto no habría un solo pedido ABIERTO que mostrar, y el estado
-     * que le da sentido a la pantalla —"pediste 21, salieron 14, faltan
-     * 7"— no se vería nunca. Los días cerrados piden lo que salió.
-     */
-    const pedido: Pedido = {
-      id: `P-${String(pedidos.length + 1).padStart(4, '0')}`,
-      clienteId: primera.clienteId!,
-      receta: primera.receta,
-      m3: esDeHoy ? producido + primera.m3 : producido,
-      precioM3: primera.precioM3 ?? 0,
-      // El pedido se toma antes de producir: dos horas antes del primer
-      // pastón es lo que tarda una mañana de teléfono.
-      creado: new Date(new Date(primera.momento).getTime() - 2 * 3_600_000).toISOString(),
-      estado: 'abierto',
-    };
-
-    pedidos.push(pedido);
-    for (const c of suyas) imputadas.set(c.id, pedido.id);
-  }
-
-  return {
-    pedidos,
-    cargas: cargas.map((c) => ({ ...c, pedidoId: imputadas.get(c.id) ?? null })),
-  };
-}

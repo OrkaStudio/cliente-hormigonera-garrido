@@ -2,14 +2,15 @@ import { PanelVentas } from '@/components/ventas/panel';
 import { traerVentas } from '@/lib/datos/ventas';
 
 /**
- * Apartado 3 — Ventas y documentos.
+ * Apartados 2 y 3 — Cargas y Ventas, en una sola pantalla.
  *
  * Spec: orka-brain/clientes/hormigonera-jose/especificaciones/
- *       2026-08-18-apartado-3-ventas-documentos.md
+ *       2026-08-18-apartado-2-cargas.md  (el tronco: qué produjo el PLC)
+ *       2026-08-18-apartado-3-ventas-documentos.md  (a quién y por cuánto)
  *
- * Era el único de los seis apartados del menú sin ruta: el item estaba
- * muerto y los papeles vivían adentro del perfil de cada cliente. Esta es
- * la vista transversal.
+ * La spec del apartado 2 ya lo decía en su primera línea —"una carga es
+ * una venta"— pero estaban construidos como dos pantallas que listaban
+ * las mismas filas → decisiones/hormigonera-la-venta-es-el-dia
  */
 
 // El corte blanco/negro se deriva del momento de la consulta.
