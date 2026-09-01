@@ -130,3 +130,48 @@ export interface Material {
   /** Para que la alerta de reposición diga a quién llamar (apartado 6). */
   proveedor?: { nombre: string; telefono: string };
 }
+
+/**
+ * A quién se le compra cada material — apartado 6.
+ *
+ * No tiene pantalla propia y no la va a tener: son tres, uno por
+ * material, y el agua sale del pozo. El proveedor vive adentro de SU
+ * material, que es donde hace falta — la comparación de precios entre
+ * el de cemento y el de arena no significa nada
+ * → decisiones/hormigonera-compras-adentro-de-materiales
+ */
+export interface Proveedor {
+  id: string;
+  nombre: string;
+  telefono: string;
+  /** Qué materiales provee. */
+  provee: string[];
+  activo: boolean;
+}
+
+/**
+ * Lo que entró a la planta.
+ *
+ * Es la mitad de arriba de la resta: los silos no tienen balanza, así que
+ * la única forma de saber cuánto queda es lo que entró menos lo que se
+ * consumió (R1 del apartado 7).
+ */
+export interface Compra {
+  id: string;
+  momento: string;
+  proveedorId: string;
+  material: string;
+  /** En la unidad en la que SE COMPRA: tonelada, m³, litro. */
+  cantidad: number;
+  unidadCompra: string;
+  /** La misma cantidad en la unidad en que la planta pesa (R1 del ap. 6). */
+  cantidadConvertida: number;
+  /** Por unidad de compra: $/t, no $/kg. Es lo que dice el remito. */
+  precioUnitario: number;
+  total: number;
+  remito: string | null;
+  /** Anular revierte el stock y deja el motivo (R5 del apartado 6). */
+  anulada?: boolean;
+  anuladaMotivo?: string | null;
+}
+
