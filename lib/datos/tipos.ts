@@ -134,11 +134,14 @@ export interface Material {
 /**
  * A quién se le compra cada material — apartado 6.
  *
- * No tiene pantalla propia y no la va a tener: son tres, uno por
- * material, y el agua sale del pozo. El proveedor vive adentro de SU
- * material, que es donde hace falta — la comparación de precios entre
- * el de cemento y el de arena no significa nada
- * → decisiones/hormigonera-compras-adentro-de-materiales
+ * No tiene pantalla propia: vive adentro de Materiales, que es donde
+ * hace falta — comparar al de cemento contra al de arena no significa
+ * nada → decisiones/hormigonera-compras-adentro-de-materiales
+ *
+ * `provee` NO es una atadura: es lo que ya le compró, y sirve para
+ * ordenar la lista y para saber a quién llamar cuando falta ese material.
+ * A cualquiera se le puede comprar cualquier cosa — atarlo 1 a 1 fue un
+ * error mío, y la spec decía lo contrario desde el 18/08.
  */
 export interface Proveedor {
   id: string;
