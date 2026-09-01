@@ -31,7 +31,8 @@ import { $, dec, fechaDeMomento, hora, num } from '@/lib/formato';
  * venta nace en cero: no suma al facturado, no tiene margen y el
  * comprobante sale vacio. Asignar sin precio no termina el trabajo.
  *
- * Se propone el de la receta y se deja editar, porque el que vale es el
+ * Se propone lo ultimo que se le cobro a ESE cliente —y si nunca le
+ * vendio, el de la receta— y se deja editar, porque el que vale es el
  * que Jose cobro — un descuento, un flete bonificado, un precio viejo que
  * ya estaba hablado. Y una vez guardado NO SE RECALCULA: es la regla dura
  * del proyecto (decisiones/hormigonera-precio-en-la-venta).
@@ -49,6 +50,7 @@ export function AsignarCargas({
   onAsignar,
   formato = 'compacta',
   recetas,
+  ultimoPrecio,
 }: {
   cargas: Carga[];
   clientes: ClienteAsignable[];
@@ -61,6 +63,14 @@ export function AsignarCargas({
   formato?: 'compacta' | 'detallada';
   /** Para el color de la etiqueta de receta. Sólo en formato detallado. */
   recetas?: string[];
+  /**
+   * Lo último que se le cobró a cada cliente, por m³.
+   *
+   * Al elegirlo, el precio propuesto pasa a ser el suyo en vez del de la
+   * receta: es lo que pide el flujo del apartado 2 y evita retipear el
+   * mismo número que ya se le cobró la semana pasada.
+   */
+  ultimoPrecio?: Record<string, number>;
 }) {
   // El generico primero: es el destino mas probable de una carga que
   // salio sin dueno — la venta suelta que nadie anoto.
@@ -87,6 +97,7 @@ export function AsignarCargas({
             clientes={ordenados}
             onAsignar={onAsignar}
             recetas={recetas ?? []}
+            ultimoPrecio={ultimoPrecio}
           />
         ))}
       </div>
@@ -96,7 +107,13 @@ export function AsignarCargas({
   return (
     <div className="divide-line/70 divide-y">
       {cargas.map((c) => (
-        <FilaAsignar key={c.id} carga={c} clientes={ordenados} onAsignar={onAsignar} />
+        <FilaAsignar
+          key={c.id}
+          carga={c}
+          clientes={ordenados}
+          onAsignar={onAsignar}
+          ultimoPrecio={ultimoPrecio}
+        />
       ))}
     </div>
   );
@@ -114,16 +131,28 @@ function FilaAsignarDetallada({
   clientes,
   onAsignar,
   recetas,
+  ultimoPrecio,
 }: {
   carga: Carga;
   clientes: ClienteAsignable[];
   onAsignar: (cargaId: string, clienteId: string, total: number) => void;
   recetas: string[];
+  ultimoPrecio?: Record<string, number>;
 }) {
   const sugerido = precioSugerido(carga.receta, carga.m3);
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [digitos, setDigitos] = useState(String(sugerido));
   const [escribiendo, setEscribiendo] = useState(false);
+
+  // Al elegir cliente se propone SU precio. No se pisa lo que ya haya
+  // tipeado a mano: el que corrigió el número lo hizo por algo.
+  function elegirCliente(id: string) {
+    setClienteId(id);
+    const suyo = ultimoPrecio?.[id];
+    if (suyo && !escribiendo && digitos === String(sugerido)) {
+      setDigitos(String(Math.round(suyo * carga.m3)));
+    }
+  }
 
   const monto = Number(digitos);
   const precioValido = Number.isFinite(monto) && monto > 0;
@@ -145,7 +174,7 @@ function FilaAsignarDetallada({
       </Campo>
 
       <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-1">
-        <Select value={clienteId} onValueChange={(v) => setClienteId(v as string)}>
+        <Select value={clienteId} onValueChange={(v) => elegirCliente(v as string)}>
           <SelectTrigger
             className="w-full min-w-0 sm:w-auto sm:flex-1"
             aria-label={`Cliente para la carga ${carga.id}`}
@@ -203,10 +232,12 @@ function FilaAsignar({
   carga,
   clientes,
   onAsignar,
+  ultimoPrecio,
 }: {
   carga: Carga;
   clientes: ClienteAsignable[];
   onAsignar: (cargaId: string, clienteId: string, total: number) => void;
+  ultimoPrecio?: Record<string, number>;
 }) {
   const sugerido = precioSugerido(carga.receta, carga.m3);
   const [clienteId, setClienteId] = useState<string | null>(null);
@@ -221,6 +252,14 @@ function FilaAsignar({
   const listo = clienteId !== null && precioValido;
   const esHoy = new Date(carga.momento).toDateString() === new Date().toDateString();
 
+  function elegirCliente(id: string) {
+    setClienteId(id);
+    const suyo = ultimoPrecio?.[id];
+    if (suyo && !escribiendo && digitos === String(sugerido)) {
+      setDigitos(String(Math.round(suyo * carga.m3)));
+    }
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
       <span className="text-ink-soft w-28 shrink-0 font-mono text-xs tabular-nums">
@@ -232,7 +271,7 @@ function FilaAsignar({
         {carga.m3} m³ <span className="text-faint font-mono text-xs">{carga.receta}</span>
       </span>
 
-      <Select value={clienteId} onValueChange={(v) => setClienteId(v as string)}>
+      <Select value={clienteId} onValueChange={(v) => elegirCliente(v as string)}>
         <SelectTrigger
           className="w-full min-w-48 sm:w-56"
           aria-label={`Cliente para la carga de las ${hora(carga.momento)}`}
