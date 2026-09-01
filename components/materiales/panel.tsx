@@ -10,8 +10,9 @@ import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import type { DatosMateriales } from '@/lib/datos/materiales';
 import { leerAjustes, ultimoAjuste } from '@/lib/datos/ajustes-locales';
 import { entradasLocales, leerCompras } from '@/lib/datos/compras-locales';
+import { leerProveedores } from '@/lib/datos/proveedores-locales';
 import { RegistrarCompra } from '@/components/materiales/registrar-compra';
-import type { Compra } from '@/lib/datos/tipos';
+import type { Compra, Proveedor } from '@/lib/datos/tipos';
 import {
   cuantoSale,
   diasQueAguanta,
@@ -76,13 +77,21 @@ function Titulo({ children }: { children: React.ReactNode }) {
 export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
   const [ajustes, setAjustes] = useState<AjusteStock[]>([]);
   const [compras, setCompras] = useState<Compra[]>([]);
+  const [nuevosProveedores, setNuevosProveedores] = useState<Proveedor[]>([]);
   const [montado, setMontado] = useState(false);
 
   useEffect(() => {
     setAjustes(leerAjustes());
     setCompras(leerCompras());
+    setNuevosProveedores(leerProveedores());
     setMontado(true);
   }, []);
+
+  /** Los sembrados más los que se dieron de alta cargando una compra. */
+  const proveedores = useMemo(
+    () => [...d.proveedores, ...nuevosProveedores],
+    [d.proveedores, nuevosProveedores],
+  );
 
   /* Lo cargado en este navegador sube el silo en el momento — es el
      criterio de terminado del apartado 6. El servidor lo recalcula
@@ -107,7 +116,30 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
   );
 
   const nombreProveedor = (id: string) =>
-    d.proveedores.find((p) => p.id === id)?.nombre ?? id;
+    proveedores.find((p) => p.id === id)?.nombre ?? id;
+
+  /**
+   * Quiénes le trajeron ESTE material, del más reciente al más viejo.
+   *
+   * Ya no es uno solo: al mismo material se le puede comprar a varios, y
+   * cuál trajo la última vez es lo que se propone al cargar la compra.
+   */
+  const proveedoresDe = (material: string) => {
+    const vistos = new Set<string>();
+    const porCompra = historial
+      .filter((c) => c.material === material)
+      .map((c) => c.proveedorId)
+      .filter((id) => !vistos.has(id) && vistos.add(id))
+      .map((id) => proveedores.find((p) => p.id === id))
+      .filter((p): p is Proveedor => Boolean(p));
+
+    // Los que declaran proveerlo pero todavía no trajeron nada.
+    const declarados = proveedores.filter(
+      (p) => p.provee.includes(material) && !vistos.has(p.id),
+    );
+
+    return [...porCompra, ...declarados];
+  };
 
   /* El que se acaba primero, arriba. Es la pregunta que trae José, y con
      el orden fijo de siempre había que compararlos a mano. El agua queda
@@ -175,7 +207,8 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
                 const prop = proporcionDeDias(dias, maxDias);
                 const sug = sugerenciaDeCompra(m);
                 const ultimo = montado ? ultimoAjuste(m.nombre, ajustes) : null;
-                const prov = d.proveedores.find((p) => p.provee.includes(m.nombre)) ?? null;
+                const suyos = montado ? proveedoresDe(m.nombre) : [];
+                const prov = suyos[0] ?? null;
                 const merma = montado
                   ? mermaMedida(ajustes.filter((a) => a.material === m.nombre))
                   : null;
@@ -281,16 +314,20 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
                           </span>
                         </span>
                       )}
-                      {prov && (
-                        /* A quién llamar cuando falta. Es un `tel:` porque
-                           desde el teléfono se marca de una (R6 del ap. 6). */
+                      {/* A quién llamar cuando falta. Es un `tel:` porque
+                          desde el teléfono se marca de una (R6 del ap. 6).
+                          Si le compró a varios, están todos: al que trajo
+                          la última vez puede no atenderle. */}
+                      {suyos.map((p) => (
                         <a
-                          href={`tel:${prov.telefono.replace(/[^\d+]/g, '')}`}
+                          key={p.id}
+                          href={`tel:${p.telefono.replace(/[^\d+]/g, '')}`}
                           className="hover:text-ink underline-offset-2 hover:underline"
                         >
-                          {prov.nombre} · <span className="num">{prov.telefono}</span>
+                          {p.nombre}
+                          {p.telefono && <> · <span className="num">{p.telefono}</span></>}
                         </a>
-                      )}
+                      ))}
                       {!m.sinStock && m.restante !== null && (
                         <span className="ml-auto flex items-center gap-4">
                           <RegistrarCompra
@@ -298,12 +335,14 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
                             unidadCompra={m.unidadCompra ?? m.unidad}
                             unidadPlanta={m.unidad}
                             factorConversion={m.factorConversion ?? 1}
-                            proveedor={prov}
+                            proveedores={proveedores}
+                            sugerido={prov}
                             ultima={m.ultimaCompra}
                             entran={sug?.cantidad ?? null}
                             restante={m.restante}
                             capacidad={m.capacidad}
                             onCompra={setCompras}
+                            onProveedor={setNuevosProveedores}
                           />
                           <AjustarStock
                             material={m.nombre}
@@ -401,7 +440,11 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
           </section>
 
           {/* El cruce que faltaba: stock y recetas viven en la misma
-              pantalla y no se hablaban. */}
+              pantalla y no se hablaban.
+
+              Capacidad y Recetas son DOS secciones y no una: metidas en
+              la misma, la grilla de dos columnas las apilaba juntas en la
+              izquierda y dejaba la derecha entera vacía. */}
           <section>
             <Titulo>Capacidad de producción</Titulo>
             <div className="border-line bg-card shadow-tarjeta divide-line mt-3 divide-y overflow-hidden rounded-lg border">
@@ -431,8 +474,9 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
               Con lo que hay en los silos. Manda el material que menos da: da igual que
               sobren áridos si el cemento no llega.
             </p>
+          </section>
 
-            <div className="mt-8">
+          <section>
             <Titulo>Recetas · dosificación por m³</Titulo>
             <div className="border-line bg-panel shadow-tarjeta mt-3 overflow-x-auto rounded-lg border">
             <table className="w-full text-xs">
@@ -488,7 +532,6 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
               <span className="text-ink-soft">última compra</span> de cada material, así que el
               margen se mueve con lo que subió el proveedor.
             </p>
-            </div>
           </section>
         </div>
       </main>
