@@ -1,4 +1,6 @@
-import type { Carga, Cliente, Material } from './tipos';
+import type { AjusteStock } from '@/lib/dominio/stock';
+import { consumoDe } from '@/lib/dominio/stock';
+import type { Carga, Cliente, Compra, Material, Proveedor } from './tipos';
 
 /**
  * Datos sembrados.
@@ -401,3 +403,149 @@ export function precioSugerido(receta: string, m3: number): number {
   return r ? Math.round(r.precio * m3) : 0;
 }
 
+
+/**
+ * A quién se le compra — apartado 6.
+ *
+ * Son tres, uno por material, y el agua sale del pozo. Por eso no hay
+ * pantalla de Proveedores: cada uno vive adentro de SU material, que es
+ * donde sirve tenerlo a mano cuando el silo está por vaciarse (R6 del
+ * apartado 6) → decisiones/hormigonera-compras-adentro-de-materiales
+ *
+ * Los nombres y teléfonos ya estaban en `MATERIALES` desde el 22/08: acá
+ * pasan a ser entidades, para que una compra pueda apuntarles.
+ */
+export const PROVEEDORES: Proveedor[] = [
+  {
+    id: 'PR-01',
+    nombre: 'Cementos Avellaneda',
+    telefono: '+54 9 2271 40-2211',
+    provee: ['Cemento'],
+    activo: true,
+  },
+  {
+    id: 'PR-02',
+    nombre: 'Arenera del Salado',
+    telefono: '+54 9 2241 33-7788',
+    provee: ['Áridos'],
+    activo: true,
+  },
+  {
+    id: 'PR-03',
+    nombre: 'Química del Centro',
+    telefono: '+54 9 2241 15-40-3311',
+    provee: ['Aditivo'],
+    activo: true,
+  },
+];
+
+/**
+ * El conteo del que arranca todo.
+ *
+ * R1 del apartado 7: el stock no se declara, se deduce — y las únicas
+ * entradas manuales son el STOCK INICIAL y los ajustes. Sin este punto de
+ * partida no hay nada que deducir: una resta necesita un cero.
+ *
+ * Es de hace 45 días para que la ventana de 30 que mira la pantalla caiga
+ * entera adentro del período con compras.
+ */
+export function inventarioInicial(ahora: Date): AjusteStock[] {
+  const cuando = new Date(ahora);
+  cuando.setDate(cuando.getDate() - 45);
+  cuando.setHours(8, 0, 0, 0);
+
+  const arranque: Record<string, number> = {
+    Cemento: 42_000,
+    'Áridos': 520_000,
+    Aditivo: 1_400,
+  };
+
+  return Object.entries(arranque).map(([material, declarado]) => ({
+    id: `AJ-INI-${material}`,
+    material,
+    fecha: cuando.toISOString(),
+    declarado,
+    // El primero no tiene contra qué compararse: no hay cuenta previa.
+    // `calculado: 0` lo deja fuera de la merma medida, que es lo correcto
+    // — un inventario de arranque no es una diferencia.
+    calculado: 0,
+    motivo: 'Inventario de arranque',
+  }));
+}
+
+/**
+ * Las compras que repusieron los silos.
+ *
+ * NO son un guion inventado: se derivan del consumo real de las cargas.
+ * Se recorre el período día por día restando lo que se consumió, y cuando
+ * la existencia baja del punto de pedido se compra un camión — lo que
+ * entre sin pasarse de la capacidad (R6 del apartado 6).
+ *
+ * El precio de cada compra sale de `costoMaterialEnDia` en la fecha en
+ * que se hizo, que es la misma función de la que Rentabilidad saca el
+ * costo histórico. Así la última compra y el costo de hoy no se
+ * contradicen entre pantallas.
+ */
+export function generarCompras(ahora: Date, cargas: Carga[]): Compra[] {
+  const inicial = inventarioInicial(ahora);
+  const compras: Compra[] = [];
+  let n = 0;
+
+  for (const ajuste of inicial) {
+    const material = MATERIALES.find((m) => m.nombre === ajuste.material);
+    const proveedor = PROVEEDORES.find((p) => p.provee.includes(ajuste.material));
+    if (!material?.capacidad || !proveedor) continue;
+
+    const factor = material.factorConversion ?? 1;
+    /* Se pide en DÍAS y no en porcentaje del silo (R5 del apartado 7).
+       Un cuarto de silo son tres semanas de aditivo y un día de cemento:
+       el mismo porcentaje significa cosas opuestas según el material. Con
+       el camión a 180 km, tres días es el margen para que llegue. */
+    const puntoDePedido = material.consumoDiario * 3;
+
+    let quedan = ajuste.declarado;
+    const arranque = new Date(ajuste.fecha);
+
+    for (let d = 0; d <= 45; d++) {
+      const dia = new Date(arranque);
+      dia.setDate(dia.getDate() + d);
+      if (dia > ahora) break;
+
+      if (quedan < puntoDePedido) {
+        // Entero en unidades de compra: nadie pide 27,4 toneladas.
+        const cabe = Math.floor((material.capacidad - quedan) / factor);
+        if (cabe > 0) {
+          const momento = new Date(dia);
+          momento.setHours(9, 30, 0, 0);
+          const diasAtras = Math.round(
+            (ahora.getTime() - momento.getTime()) / 86_400_000,
+          );
+          const porUnidadDePlanta = costoMaterialEnDia(material.nombre, diasAtras);
+          const precioUnitario = Math.round(porUnidadDePlanta * factor);
+
+          compras.push({
+            id: `CP-${String(++n).padStart(4, '0')}`,
+            momento: momento.toISOString(),
+            proveedorId: proveedor.id,
+            material: material.nombre,
+            cantidad: cabe,
+            unidadCompra: material.unidadCompra ?? material.unidad,
+            cantidadConvertida: cabe * factor,
+            precioUnitario,
+            total: precioUnitario * cabe,
+            remito: `R-${String(100_000 + n * 137).slice(0, 6)}`,
+          });
+
+          quedan += cabe * factor;
+        }
+      }
+
+      const delDia = cargas.filter(
+        (c) => new Date(c.momento).toDateString() === dia.toDateString(),
+      );
+      quedan -= consumoDe(material.nombre, delDia);
+    }
+  }
+
+  return compras.sort((a, b) => a.momento.localeCompare(b.momento));
+}

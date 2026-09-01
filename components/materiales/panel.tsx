@@ -6,8 +6,12 @@ import { BarraSuperior } from '@/components/app/barra-superior';
 import { AjustarStock } from '@/components/materiales/ajustar-stock';
 import { Cifra } from '@/components/dominio/cifra';
 import { Estado } from '@/components/dominio/estado';
+import { EstadoVacio } from '@/components/dominio/estado-vacio';
 import type { DatosMateriales } from '@/lib/datos/materiales';
 import { leerAjustes, ultimoAjuste } from '@/lib/datos/ajustes-locales';
+import { entradasLocales, leerCompras } from '@/lib/datos/compras-locales';
+import { RegistrarCompra } from '@/components/materiales/registrar-compra';
+import type { Compra } from '@/lib/datos/tipos';
 import {
   cuantoSale,
   diasQueAguanta,
@@ -19,7 +23,7 @@ import {
   type NivelStock,
 } from '@/lib/dominio/stock';
 import { UMBRALES } from '@/lib/dominio/umbrales';
-import { $, dec, num } from '@/lib/formato';
+import { $, dec, fechaDeMomento, num } from '@/lib/formato';
 import { cn } from '@/lib/utils';
 
 /**
@@ -71,23 +75,50 @@ function Titulo({ children }: { children: React.ReactNode }) {
 
 export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
   const [ajustes, setAjustes] = useState<AjusteStock[]>([]);
+  const [compras, setCompras] = useState<Compra[]>([]);
   const [montado, setMontado] = useState(false);
 
   useEffect(() => {
     setAjustes(leerAjustes());
+    setCompras(leerCompras());
     setMontado(true);
   }, []);
+
+  /* Lo cargado en este navegador sube el silo en el momento — es el
+     criterio de terminado del apartado 6. El servidor lo recalcula
+     entero en el próximo refresh. */
+  const conEntradas = useMemo(
+    () =>
+      d.materiales.map((m) =>
+        m.restante === null
+          ? m
+          : { ...m, restante: m.restante + entradasLocales(m.nombre, compras) },
+      ),
+    [d.materiales, compras],
+  );
+
+  /** El historial completo: lo sembrado y lo que se cargó recién. */
+  const historial = useMemo(
+    () =>
+      [...compras, ...d.compras]
+        .filter((c) => !c.anulada)
+        .sort((a, b) => b.momento.localeCompare(a.momento)),
+    [compras, d.compras],
+  );
+
+  const nombreProveedor = (id: string) =>
+    d.proveedores.find((p) => p.id === id)?.nombre ?? id;
 
   /* El que se acaba primero, arriba. Es la pregunta que trae José, y con
      el orden fijo de siempre había que compararlos a mano. El agua queda
      al final: no tiene días. */
   const conDias = useMemo(
     () =>
-      d.materiales.map((m) => ({
+      conEntradas.map((m) => ({
         m,
         dias: m.sinStock || m.restante === null ? null : diasQueAguanta(m.restante, m.consumoDiario),
       })),
-    [d.materiales],
+    [conEntradas],
   );
 
   const ordenados = useMemo(
@@ -144,6 +175,7 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
                 const prop = proporcionDeDias(dias, maxDias);
                 const sug = sugerenciaDeCompra(m);
                 const ultimo = montado ? ultimoAjuste(m.nombre, ajustes) : null;
+                const prov = d.proveedores.find((p) => p.provee.includes(m.nombre)) ?? null;
                 const merma = montado
                   ? mermaMedida(ajustes.filter((a) => a.material === m.nombre))
                   : null;
@@ -176,9 +208,20 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
                                 <span>Capacidad {num(m.capacidad)} {m.unidad}</span>
                               )}
                               {m.costo !== null && m.costo > 0 && (
-                                <span title="Provisorio hasta que exista Compras">
-                                  {m.costo < 100 ? `$ ${dec(m.costo)}` : $(m.costo)}/{m.unidad}
-                                  <span className="text-faint font-sans"> · provisorio</span>
+                                <span
+                                  title={
+                                    m.costoDe
+                                      ? `Sale de la última compra. El precio que se pagó es el que vale para reponer hoy.`
+                                      : 'Todavía no hay compras cargadas de este material'
+                                  }
+                                >
+                                  {m.costo < 100 ? `$ ${dec(m.costo)}` : $(Math.round(m.costo))}/
+                                  {m.unidad}
+                                  <span className="text-faint font-sans">
+                                    {m.costoDe
+                                      ? ` · última compra ${fechaDeMomento(m.costoDe)}`
+                                      : ' · sin compras'}
+                                  </span>
                                 </span>
                               )}
                             </>
@@ -238,8 +281,30 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
                           </span>
                         </span>
                       )}
+                      {prov && (
+                        /* A quién llamar cuando falta. Es un `tel:` porque
+                           desde el teléfono se marca de una (R6 del ap. 6). */
+                        <a
+                          href={`tel:${prov.telefono.replace(/[^\d+]/g, '')}`}
+                          className="hover:text-ink underline-offset-2 hover:underline"
+                        >
+                          {prov.nombre} · <span className="num">{prov.telefono}</span>
+                        </a>
+                      )}
                       {!m.sinStock && m.restante !== null && (
-                        <span className="ml-auto">
+                        <span className="ml-auto flex items-center gap-4">
+                          <RegistrarCompra
+                            material={m.nombre}
+                            unidadCompra={m.unidadCompra ?? m.unidad}
+                            unidadPlanta={m.unidad}
+                            factorConversion={m.factorConversion ?? 1}
+                            proveedor={prov}
+                            ultima={m.ultimaCompra}
+                            entran={sug?.cantidad ?? null}
+                            restante={m.restante}
+                            capacidad={m.capacidad}
+                            onCompra={setCompras}
+                          />
                           <AjustarStock
                             material={m.nombre}
                             calculado={m.restante}
@@ -250,10 +315,89 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
                         </span>
                       )}
                     </div>
+
+                    {/* De dónde sale el número. El cartel decía "se deduce"
+                        y el número era una constante; ahora se puede leer
+                        la resta entera. */}
+                    {!m.sinStock && m.deduccion.hayDato && (
+                      <p className="text-faint mt-1.5 text-xs">
+                        <span className="num">{num(m.deduccion.partida)}</span> contados el{' '}
+                        {fechaDeMomento(m.deduccion.desde!)}
+                        {' + '}
+                        <span className="num">{num(m.deduccion.entradas)}</span> que entraron
+                        {' − '}
+                        <span className="num">{num(m.deduccion.consumo)}</span> que se
+                        consumieron
+                      </p>
+                    )}
                   </article>
                 );
               })}
             </div>
+          </section>
+
+          {/* El apartado 6, adentro. Va DESPUÉS del stock porque es su
+              respaldo: se entra a la pantalla a ver cuánto queda, y el
+              historial es lo que explica por qué queda eso. */}
+          <section>
+            <Titulo>Compras</Titulo>
+            <div className="border-line bg-card shadow-tarjeta mt-3 overflow-hidden rounded-lg border">
+              {historial.length === 0 ? (
+                <EstadoVacio
+                  className="m-4"
+                  titulo="Todavía no hay compras cargadas"
+                  descripcion="Sin compras el stock no se puede deducir: es la mitad de arriba de la resta."
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-line text-faint border-b text-left text-xs">
+                        <th className="px-3 py-3 font-medium">Fecha</th>
+                        <th className="px-2 py-3 font-medium">Material</th>
+                        <th className="w-full px-2 py-3 font-medium">Proveedor</th>
+                        <th className="px-2 py-3 text-right font-medium">Cantidad</th>
+                        <th className="px-2 py-3 text-right font-medium whitespace-nowrap">
+                          Precio
+                        </th>
+                        <th className="px-2 py-3 text-right font-medium">Total</th>
+                        <th className="px-3 py-3 text-right font-medium">Remito</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-line divide-y">
+                      {historial.slice(0, 12).map((c) => (
+                        <tr key={c.id}>
+                          <td className="num px-3 py-2.5 whitespace-nowrap">
+                            {fechaDeMomento(c.momento)}
+                          </td>
+                          <td className="px-2 py-2.5 whitespace-nowrap">{c.material}</td>
+                          <td className="text-muted-foreground px-2 py-2.5">
+                            {nombreProveedor(c.proveedorId)}
+                          </td>
+                          <td className="num px-2 py-2.5 text-right whitespace-nowrap">
+                            {num(c.cantidad)} <span className="text-faint">{c.unidadCompra}</span>
+                          </td>
+                          <td className="num px-2 py-2.5 text-right whitespace-nowrap">
+                            {$(c.precioUnitario)}
+                          </td>
+                          <td className="num px-2 py-2.5 text-right whitespace-nowrap">
+                            {$(c.total)}
+                          </td>
+                          <td className="num text-faint px-3 py-2.5 text-right whitespace-nowrap">
+                            {c.remito ?? '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <p className="text-faint mt-2 text-xs">
+              El precio se guarda por unidad de compra —lo que dice el remito— y la app lo
+              convierte a la unidad del silo. El costo de reponer que se muestra arriba sale de
+              la <span className="text-ink-soft">última</span> compra, no de un promedio.
+            </p>
           </section>
 
           {/* El cruce que faltaba: stock y recetas viven en la misma
@@ -339,9 +483,10 @@ export function PanelMateriales({ datos: d }: { datos: DatosMateriales }) {
 
             <p className="text-faint mt-2 text-xs">
               La dosificación es por m³ y es la <span className="text-ink-soft">declarada</span>:
-            la que manda es la del PLC. Si no coinciden, el problema está en el autómata y no
-            se arregla calibrando una balanza. Los costos por kilo son{' '}
-            <span className="text-ink-soft">provisorios</span> hasta que exista Compras.
+              la que manda es la del PLC. Si no coinciden, el problema está en el autómata y no
+              se arregla calibrando una balanza. Los costos por unidad salen de la{' '}
+              <span className="text-ink-soft">última compra</span> de cada material, así que el
+              margen se mueve con lo que subió el proveedor.
             </p>
             </div>
           </section>

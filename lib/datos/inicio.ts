@@ -1,5 +1,6 @@
 import { derivarAlertas, estadoDePlanta } from '@/lib/dominio/alertas';
-import { CLIENTES, MATERIALES, generarCargas } from './semilla';
+import { CLIENTES, MATERIALES, generarCargas, generarCompras, inventarioInicial } from './semilla';
+import { stockDeducido } from '@/lib/dominio/compras';
 import { consumoDiarioDe } from '@/lib/dominio/stock';
 import type { Carga } from './tipos';
 
@@ -69,9 +70,21 @@ export function derivarResumen(cargas: Carga[], rango: Rango, ahora: Date) {
   desde30.setDate(desde30.getDate() - 30);
   const ultimos30 = cargas.filter((c) => new Date(c.momento) >= desde30);
 
+  /*
+   * El stock DEDUCIDO, igual que Materiales.
+   *
+   * El mismo párrafo de arriba, otra vez y con otro campo: cuando Inicio
+   * leía la constante de la semilla y Materiales la resta, el mismo silo
+   * decía 462.000 kg de áridos acá y 68.279 allá. Las dos pantallas leen
+   * del mismo helper o se contradicen — no hay tercera opción.
+   */
+  const compras = generarCompras(ahora, cargas);
+  const inicial = inventarioInicial(ahora);
+
   const materiales = MATERIALES.map((m) => {
     const { porDia } = consumoDiarioDe(m.nombre, ultimos30);
-    return { ...m, consumoDiario: porDia || m.consumoDiario };
+    const { restante } = stockDeducido(m, compras, cargas, inicial);
+    return { ...m, consumoDiario: porDia || m.consumoDiario, restante };
   });
 
   return {
